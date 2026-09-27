@@ -170,7 +170,12 @@ def create_task(user_id, data):
     return cur.lastrowid
 
 
-def update_task(user_id, task_id, data):
+def update_task(user_id, task_id, data, new_owner_id=None):
+    """user_id is the current owner, used for the authorization check (the
+    caller must already own the task to reach this function). new_owner_id
+    optionally reassigns it to a different user (admin-only at the route
+    layer) — the task then moves entirely into that user's own task list.
+    """
     db = get_db()
     existing = get_task(user_id, task_id)
     if not existing:
@@ -184,11 +189,12 @@ def update_task(user_id, task_id, data):
         completed_at = None
 
     db.execute(
-        """UPDATE tasks SET project_id=?, task_date=?, task_time=?, title=?, description=?,
+        """UPDATE tasks SET user_id=?, project_id=?, task_date=?, task_time=?, title=?, description=?,
            priority=?, status=?, due_date=?, notes=?, time_spent_hours=?, completed_at=?,
            updated_at=datetime('now')
            WHERE id=? AND user_id=?""",
         (
+            new_owner_id or user_id,
             _parse_project_id(data),
             data["task_date"],
             data.get("task_time") or None,

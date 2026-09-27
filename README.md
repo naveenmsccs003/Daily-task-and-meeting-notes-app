@@ -149,6 +149,19 @@ split) — enter it when you complete or update a task. Reports show a
 **Hours Logged** total for the selected date range/project/user scope, and
 every export (Excel, CSV, PDF) includes the Project and Hours columns.
 
+### Assigning a task to another user
+
+Admins get an **Assign To** dropdown on the task create/edit form (regular
+users never see it — their tasks are always their own). Assigning a task
+transfers it completely: it disappears from the assigner's own task list
+and appears in the assignee's, fully editable there, exactly like any task
+they created themselves. The assigner can still find it afterward through
+admin oversight (the "All Users" owner filter on Tasks/Reports), but only
+to view it — not to edit it back, since editing stays restricted to the
+current owner. The `assigned_user_id` field is validated server-side
+against the real user list on every request, so a non-admin cannot assign
+a task to someone else by tampering with the form.
+
 ## Running Tests
 
 ```bash

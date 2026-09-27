@@ -44,6 +44,25 @@ def _resolve_owner_scope():
     return current_user.id, "me"
 
 
+def _resolve_assignee(default_owner_id):
+    """Admin-only: pick who a task belongs to from the form's
+    assigned_user_id field. Falls back to default_owner_id when absent,
+    invalid, or the requester isn't an admin — regular users can never
+    assign a task to anyone but themselves.
+    """
+    if not current_user.is_admin:
+        return default_owner_id, None
+
+    raw = (request.form.get("assigned_user_id") or "").strip()
+    if not raw:
+        return default_owner_id, None
+
+    target = User.get_by_id(raw) if raw.isdigit() else None
+    if not target:
+        return default_owner_id, "Select a valid user to assign this task to."
+    return target.id, None
+
+
 @tasks_bp.route("")
 @login_required
 def list_view():
@@ -89,23 +108,30 @@ def list_view():
 @handle_errors("Unable to create task.")
 def create():
     all_projects = project_service.list_projects(include_archived=False)
+    all_users = User.get_all() if current_user.is_admin else None
 
     if request.method == "POST":
         errors = validate_task(request.form)
+        owner_id, assignee_error = _resolve_assignee(current_user.id)
+        if assignee_error:
+            errors["assigned_user_id"] = assignee_error
+
         if not errors:
-            task_service.create_task(current_user.id, request.form)
+            task_service.create_task(owner_id, request.form)
             flash("Task created successfully.", "success")
             return redirect(url_for("tasks.list_view"))
         flash("Please correct the errors below.", "danger")
         return render_template(
             "tasks/form.html", task=request.form, errors=errors,
             priorities=TASK_PRIORITIES, statuses=TASK_STATUSES, mode="create",
-            all_projects=all_projects,
+            all_projects=all_projects, all_users=all_users,
+            selected_assignee_id=request.form.get("assigned_user_id") or current_user.id,
         )
 
     return render_template(
         "tasks/form.html", task={}, errors={}, priorities=TASK_PRIORITIES,
         statuses=TASK_STATUSES, mode="create", all_projects=all_projects,
+        all_users=all_users, selected_assignee_id=current_user.id,
     )
 
 
@@ -133,24 +159,37 @@ def edit(task_id):
         return redirect(url_for("tasks.list_view"))
 
     all_projects = project_service.list_projects(include_archived=False)
+    all_users = User.get_all() if current_user.is_admin else None
 
     if request.method == "POST":
         errors = validate_task(request.form)
+        new_owner_id, assignee_error = _resolve_assignee(current_user.id)
+        if assignee_error:
+            errors["assigned_user_id"] = assignee_error
+
         if not errors:
-            task_service.update_task(current_user.id, task_id, request.form)
+            task_service.update_task(
+                current_user.id, task_id, request.form,
+                new_owner_id=new_owner_id if new_owner_id != current_user.id else None,
+            )
             flash("Task updated successfully.", "success")
+            if new_owner_id != current_user.id:
+                flash("Task reassigned — it now appears in that user's task list.", "info")
+                return redirect(url_for("tasks.list_view"))
             return redirect(url_for("tasks.detail", task_id=task_id))
         flash("Please correct the errors below.", "danger")
         return render_template(
             "tasks/form.html", task=request.form, errors=errors, task_id=task_id,
             priorities=TASK_PRIORITIES, statuses=TASK_STATUSES, mode="edit",
-            all_projects=all_projects,
+            all_projects=all_projects, all_users=all_users,
+            selected_assignee_id=request.form.get("assigned_user_id") or task["user_id"],
         )
 
     return render_template(
         "tasks/form.html", task=task, errors={}, task_id=task_id,
         priorities=TASK_PRIORITIES, statuses=TASK_STATUSES, mode="edit",
-        all_projects=all_projects,
+        all_projects=all_projects, all_users=all_users,
+        selected_assignee_id=task["user_id"],
     )
 
 

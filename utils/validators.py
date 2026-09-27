@@ -73,6 +73,10 @@ def validate_task(data):
     if project_id and not project_id.isdigit():
         _err(errors, "project_id", "Select a valid project.")
 
+    assigned_user_id = (data.get("assigned_user_id") or "").strip()
+    if assigned_user_id and not assigned_user_id.isdigit():
+        _err(errors, "assigned_user_id", "Select a valid user.")
+
     return errors
 
 
