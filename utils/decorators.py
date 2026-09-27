@@ -1,8 +1,23 @@
 from functools import wraps
 
-from flask import current_app
+from flask import abort, current_app
+from flask_login import current_user
 
 from utils.helpers import json_error, wants_json
+
+
+def admin_required(view):
+    """Restrict a route to admin-role users. Apply after @login_required so
+    an unauthenticated request is sent to the login page rather than a 403.
+    """
+
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            abort(403)
+        return view(*args, **kwargs)
+
+    return wrapped
 
 
 def handle_errors(default_message="Something went wrong. Please try again."):

@@ -2,13 +2,15 @@
 data can feed the reports page, Excel, CSV, and PDF exports.
 """
 from services import meeting_service, task_service
+from services.task_service import ALL_USERS
 from utils.date_utils import format_date_for_display, today
 
 
-def build_report(user_id, from_date, to_date):
-    tasks = task_service.tasks_in_range(user_id, from_date, to_date)
-    meetings = meeting_service.meetings_in_range(user_id, from_date, to_date)
-    status_counts = task_service.status_counts(user_id, from_date, to_date)
+def build_report(owner_id, from_date, to_date):
+    """owner_id may be the ALL_USERS sentinel for an admin's cross-user report."""
+    tasks = task_service.tasks_in_range(owner_id, from_date, to_date)
+    meetings = meeting_service.meetings_in_range(owner_id, from_date, to_date)
+    status_counts = task_service.status_counts(owner_id, from_date, to_date)
 
     t = today()
     overdue = sum(
@@ -44,4 +46,5 @@ def build_report(user_id, from_date, to_date):
         "range_label": range_label,
         "from_date": from_date,
         "to_date": to_date,
+        "show_owner": owner_id == ALL_USERS,
     }

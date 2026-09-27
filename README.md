@@ -16,6 +16,8 @@ easy to maintain.
 - **Exports** — Excel (.xlsx, multi-sheet with formatting), CSV (zipped tasks.csv + meetings.csv), PDF (paginated, professionally formatted)
 - **Security** — CSRF protection, password hashing, parameterized SQL, output escaping, safe filenames, no stack traces shown to users
 - **Responsive UI** — dark sidebar / light content, Bootstrap 5, works on desktop, tablet, and mobile
+- **Onboarding tour** — a short guided tour auto-plays on a user's first Dashboard visit; replay anytime via "Take a Tour" in the sidebar
+- **Multi-user & roles** — admins can create/deactivate user accounts from a Users page and get read-only oversight of everyone's tasks/meetings/reports; regular users only ever see and edit their own data (see **Multi-user & Roles** below)
 
 ## Technology Stack
 
@@ -100,6 +102,31 @@ Set via environment variables or `.env` (see `.env.example`):
 | `TIMEZONE` | IANA timezone for "today" calculations | `Asia/Kolkata` |
 | `DEBUG` | Flask debug mode | `True` |
 | `MAX_CONTENT_LENGTH` | Max request body size (bytes) | `2097152` (2 MB) |
+
+## Multi-user & Roles
+
+Every user has a `role` of `user` (default) or `admin`. The bootstrap account
+created by `init_db.py` is always `admin`; running `init_db.py` against an
+existing database also upgrades its schema and promotes the `admin` username
+in place, so no data is lost.
+
+- **Regular users** only ever see, search, filter, and export their own
+  tasks and meetings. There is no way to reach another user's data.
+- **Admins** get an extra **Users** section in the sidebar to create new
+  accounts, edit full name/email/role, reset a password, and
+  activate/deactivate a login. Deactivated users can no longer log in but
+  their historical data is kept (never hard-deleted, since tasks/meetings
+  cascade-delete with their owner).
+- **Admin oversight is read-only.** On the Tasks, Meetings, and Reports
+  pages, admins get an extra "Owner" filter (My Data / All Users / a
+  specific person) that adds an Owner column and includes it in exports.
+  Viewing another user's record works from any admin session, but editing,
+  deleting, or changing its status is still restricted to that record's
+  owner — an admin viewing someone else's task/meeting sees a read-only
+  detail page with no Edit/Delete controls.
+- **Safety guards:** an admin can never deactivate or demote their own
+  account (to avoid self-lockout), and the last remaining active admin
+  cannot be deactivated or demoted by anyone.
 
 ## Running Tests
 

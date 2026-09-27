@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS users (
     password_hash TEXT NOT NULL,
     full_name TEXT,
     email TEXT,
+    role TEXT NOT NULL DEFAULT 'user',
     is_active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
@@ -75,14 +76,31 @@ CREATE INDEX IF NOT EXISTS idx_meetings_user_id ON meetings (user_id);
 """
 
 
+def _migrate(conn):
+    """Add columns introduced after the initial release, for databases that
+    already exist on disk. CREATE TABLE IF NOT EXISTS above never touches an
+    existing table, so new columns have to be added explicitly. Safe to
+    re-run: each ALTER is guarded by a check against the current schema.
+    """
+    columns = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
+    if "role" not in columns:
+        conn.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
+        # The first user created by init_db.py is the original admin login;
+        # promote it so an upgraded database still has at least one admin.
+        conn.execute("UPDATE users SET role = 'admin' WHERE username = 'admin'")
+    conn.commit()
+
+
 def init_db(app):
     """Create tables/indexes if they do not already exist. Never drops data."""
     db_path = app.config["DATABASE_PATH"]
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
     try:
         conn.executescript(SCHEMA)
         conn.commit()
+        _migrate(conn)
     finally:
         conn.close()
 

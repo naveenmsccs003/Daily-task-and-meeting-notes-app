@@ -4,14 +4,22 @@
 <div class="page-header">
     <h1>{{ meeting.title }}</h1>
     <div class="quick-actions">
+        {% if not read_only %}
         <a href="{{ url_for('meetings.edit', meeting_id=meeting.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
         <form method="post" action="{{ url_for('meetings.delete', meeting_id=meeting.id) }}" class="delete-form d-inline">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
         </form>
+        {% endif %}
         <a href="{{ url_for('meetings.list_view') }}" class="btn btn-outline-secondary btn-sm">Back to Meetings</a>
     </div>
 </div>
+
+{% if read_only %}
+<div class="alert alert-info">
+    <i class="bi bi-eye"></i> Viewing as admin &mdash; owned by <strong>{{ meeting.owner_full_name or meeting.owner_username }}</strong>. This record is read-only.
+</div>
+{% endif %}
 
 <div class="card panel detail-panel">
     <dl class="detail-list">

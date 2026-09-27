@@ -1,8 +1,9 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
-from models import TASK_PRIORITIES, TASK_STATUSES
+from models import TASK_PRIORITIES, TASK_STATUSES, User
 from services import task_service
+from services.task_service import ALL_USERS
 from utils.date_utils import get_period_dates
 from utils.decorators import handle_errors
 from utils.helpers import json_error, json_success, wants_json
@@ -26,6 +27,22 @@ def _filters_from_request():
     }, period
 
 
+def _resolve_owner_scope():
+    """Admins may view their own tasks, everyone's, or one other user's via
+    an `owner` query param ('me', 'all', or a user id). Everyone else is
+    always scoped to themselves.
+    """
+    if not current_user.is_admin:
+        return current_user.id, "me"
+
+    owner_param = request.args.get("owner", "me")
+    if owner_param == "all":
+        return ALL_USERS, "all"
+    if owner_param.isdigit():
+        return int(owner_param), owner_param
+    return current_user.id, "me"
+
+
 @tasks_bp.route("")
 @login_required
 def list_view():
@@ -40,8 +57,10 @@ def list_view():
     sort_dir = request.args.get("dir", "desc")
     per_page = current_app.config["TASKS_PER_PAGE"]
 
+    owner_id, owner_scope = _resolve_owner_scope()
+
     tasks, total = task_service.list_tasks(
-        current_user.id, filters, page=page, per_page=per_page, sort=sort, sort_dir=sort_dir
+        owner_id, filters, page=page, per_page=per_page, sort=sort, sort_dir=sort_dir
     )
     total_pages = max((total + per_page - 1) // per_page, 1)
 
@@ -57,6 +76,9 @@ def list_view():
         filters=request.args,
         priorities=TASK_PRIORITIES,
         statuses=TASK_STATUSES,
+        owner_scope=owner_scope,
+        show_owner_column=owner_id != current_user.id,
+        all_users=User.get_all() if current_user.is_admin else None,
     )
 
 
@@ -86,10 +108,14 @@ def create():
 @login_required
 def detail(task_id):
     task = task_service.get_task(current_user.id, task_id)
+    read_only = False
+    if not task and current_user.is_admin:
+        task = task_service.get_task_any(task_id)
+        read_only = True
     if not task:
         flash("Task not found.", "warning")
         return redirect(url_for("tasks.list_view"))
-    return render_template("tasks/detail.html", task=task)
+    return render_template("tasks/detail.html", task=task, read_only=read_only)
 
 
 @tasks_bp.route("/<int:task_id>/edit", methods=["GET", "POST"])

@@ -5,11 +5,11 @@ from database import get_db
 from utils.date_utils import format_date_for_db, today
 
 PRIORITY_ORDER_SQL = (
-    "CASE priority WHEN 'LOW' THEN 1 WHEN 'MEDIUM' THEN 2 "
+    "CASE tasks.priority WHEN 'LOW' THEN 1 WHEN 'MEDIUM' THEN 2 "
     "WHEN 'HIGH' THEN 3 WHEN 'URGENT' THEN 4 ELSE 0 END"
 )
 STATUS_ORDER_SQL = (
-    "CASE status WHEN 'TODO' THEN 1 WHEN 'IN_PROGRESS' THEN 2 "
+    "CASE tasks.status WHEN 'TODO' THEN 1 WHEN 'IN_PROGRESS' THEN 2 "
     "WHEN 'ON_HOLD' THEN 3 WHEN 'COMPLETED' THEN 4 WHEN 'CANCELLED' THEN 5 ELSE 0 END"
 )
 
@@ -18,10 +18,10 @@ STATUS_ORDER_SQL = (
 # below is safe from injection; priority/status use a CASE ranking instead
 # of a plain column so "High" sorts above "Low", not alphabetically.
 SORT_COLUMNS = {
-    "date": "task_date",
+    "date": "tasks.task_date",
     "priority": PRIORITY_ORDER_SQL,
     "status": STATUS_ORDER_SQL,
-    "due_date": "due_date",
+    "due_date": "tasks.due_date",
 }
 
 
@@ -29,38 +29,47 @@ def _apply_filters(where, params, filters):
     search = (filters.get("search") or "").strip()
     if search:
         like = f"%{search}%"
-        where.append("(title LIKE ? OR description LIKE ? OR notes LIKE ?)")
+        where.append("(tasks.title LIKE ? OR tasks.description LIKE ? OR tasks.notes LIKE ?)")
         params.extend([like, like, like])
 
     status = (filters.get("status") or "").strip().upper()
     if status:
-        where.append("status = ?")
+        where.append("tasks.status = ?")
         params.append(status)
 
     priority = (filters.get("priority") or "").strip().upper()
     if priority:
-        where.append("priority = ?")
+        where.append("tasks.priority = ?")
         params.append(priority)
 
     from_date = filters.get("from_date")
     to_date = filters.get("to_date")
     if from_date:
-        where.append("task_date >= ?")
+        where.append("tasks.task_date >= ?")
         params.append(format_date_for_db(from_date))
     if to_date:
-        where.append("task_date <= ?")
+        where.append("tasks.task_date <= ?")
         params.append(format_date_for_db(to_date))
 
 
-def list_tasks(user_id, filters=None, page=1, per_page=25, sort="date", sort_dir="desc"):
+ALL_USERS = "ALL"
+
+
+def list_tasks(owner_id, filters=None, page=1, per_page=25, sort="date", sort_dir="desc"):
+    """owner_id is a specific user's id, or the ALL_USERS sentinel for the
+    admin oversight view (no owner filter, plus the owner's name joined in).
+    """
     filters = filters or {}
     db = get_db()
-    where = ["user_id = ?"]
-    params = [user_id]
+    where = []
+    params = []
+    if owner_id != ALL_USERS:
+        where.append("tasks.user_id = ?")
+        params.append(owner_id)
     _apply_filters(where, params, filters)
-    where_sql = " AND ".join(where)
+    where_sql = " AND ".join(where) if where else "1=1"
 
-    sort_col = SORT_COLUMNS.get(sort, "task_date")
+    sort_col = SORT_COLUMNS.get(sort, "tasks.task_date")
     sort_dir = "ASC" if sort_dir == "asc" else "DESC"
 
     total = db.execute(
@@ -69,8 +78,10 @@ def list_tasks(user_id, filters=None, page=1, per_page=25, sort="date", sort_dir
 
     offset = max(page - 1, 0) * per_page
     rows = db.execute(
-        f"""SELECT * FROM tasks WHERE {where_sql}
-            ORDER BY {sort_col} {sort_dir}, task_time {sort_dir}, id DESC
+        f"""SELECT tasks.*, users.username AS owner_username, users.full_name AS owner_full_name
+            FROM tasks JOIN users ON users.id = tasks.user_id
+            WHERE {where_sql}
+            ORDER BY {sort_col} {sort_dir}, tasks.task_time {sort_dir}, tasks.id DESC
             LIMIT ? OFFSET ?""",
         params + [per_page, offset],
     ).fetchall()
@@ -79,8 +90,23 @@ def list_tasks(user_id, filters=None, page=1, per_page=25, sort="date", sort_dir
 
 
 def get_task(user_id, task_id):
+    """Strictly owner-scoped lookup, used for edit/delete/status-update
+    authorization checks — never returns another user's task.
+    """
     return get_db().execute(
         "SELECT * FROM tasks WHERE id = ? AND user_id = ?", (task_id, user_id)
+    ).fetchone()
+
+
+def get_task_any(task_id):
+    """Admin oversight lookup: any task regardless of owner, with the
+    owner's name joined in for display. Read-only callers only.
+    """
+    return get_db().execute(
+        """SELECT tasks.*, users.username AS owner_username, users.full_name AS owner_full_name
+           FROM tasks JOIN users ON users.id = tasks.user_id
+           WHERE tasks.id = ?""",
+        (task_id,),
     ).fetchone()
 
 
@@ -177,17 +203,20 @@ def delete_task(user_id, task_id):
     return cur.rowcount > 0
 
 
-def status_counts(user_id, from_date=None, to_date=None):
+def status_counts(owner_id, from_date=None, to_date=None):
     db = get_db()
-    where = ["user_id = ?"]
-    params = [user_id]
+    where = []
+    params = []
+    if owner_id != ALL_USERS:
+        where.append("user_id = ?")
+        params.append(owner_id)
     if from_date:
         where.append("task_date >= ?")
         params.append(format_date_for_db(from_date))
     if to_date:
         where.append("task_date <= ?")
         params.append(format_date_for_db(to_date))
-    where_sql = " AND ".join(where)
+    where_sql = " AND ".join(where) if where else "1=1"
 
     rows = db.execute(
         f"SELECT status, COUNT(*) as cnt FROM tasks WHERE {where_sql} GROUP BY status",
@@ -219,19 +248,26 @@ def tasks_for_date(user_id, date_value):
     ).fetchall()
 
 
-def tasks_in_range(user_id, from_date, to_date):
-    """All tasks (no pagination) for report/export generation."""
+def tasks_in_range(owner_id, from_date, to_date):
+    """All tasks (no pagination) for report/export generation. owner_id may
+    be the ALL_USERS sentinel for an admin's cross-user report.
+    """
     db = get_db()
-    where = ["user_id = ?"]
-    params = [user_id]
+    where = []
+    params = []
+    if owner_id != ALL_USERS:
+        where.append("tasks.user_id = ?")
+        params.append(owner_id)
     if from_date:
-        where.append("task_date >= ?")
+        where.append("tasks.task_date >= ?")
         params.append(format_date_for_db(from_date))
     if to_date:
-        where.append("task_date <= ?")
+        where.append("tasks.task_date <= ?")
         params.append(format_date_for_db(to_date))
-    where_sql = " AND ".join(where)
+    where_sql = " AND ".join(where) if where else "1=1"
     return db.execute(
-        f"SELECT * FROM tasks WHERE {where_sql} ORDER BY task_date DESC, task_time DESC",
+        f"""SELECT tasks.*, users.username AS owner_username, users.full_name AS owner_full_name
+            FROM tasks JOIN users ON users.id = tasks.user_id
+            WHERE {where_sql} ORDER BY tasks.task_date DESC, tasks.task_time DESC""",
         params,
     ).fetchall()

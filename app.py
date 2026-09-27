@@ -37,12 +37,14 @@ def create_app(config_class=Config):
     from routes.meetings import meetings_bp
     from routes.reports import reports_bp
     from routes.tasks import tasks_bp
+    from routes.users import users_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(tasks_bp)
     app.register_blueprint(meetings_bp)
     app.register_blueprint(reports_bp)
+    app.register_blueprint(users_bp)
 
     register_error_handlers(app)
     configure_logging(app)

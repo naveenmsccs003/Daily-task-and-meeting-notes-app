@@ -1,34 +1,42 @@
 from database import get_db
 from utils.date_utils import format_date_for_db
 
+ALL_USERS = "ALL"
+
 
 def _apply_filters(where, params, filters):
     search = (filters.get("search") or "").strip()
     if search:
         like = f"%{search}%"
         where.append(
-            "(title LIKE ? OR my_points LIKE ? OR meeting_points LIKE ?"
-            " OR decisions LIKE ? OR notes LIKE ?)"
+            "(meetings.title LIKE ? OR meetings.my_points LIKE ? OR meetings.meeting_points LIKE ?"
+            " OR meetings.decisions LIKE ? OR meetings.notes LIKE ?)"
         )
         params.extend([like, like, like, like, like])
 
     from_date = filters.get("from_date")
     to_date = filters.get("to_date")
     if from_date:
-        where.append("meeting_date >= ?")
+        where.append("meetings.meeting_date >= ?")
         params.append(format_date_for_db(from_date))
     if to_date:
-        where.append("meeting_date <= ?")
+        where.append("meetings.meeting_date <= ?")
         params.append(format_date_for_db(to_date))
 
 
-def list_meetings(user_id, filters=None, page=1, per_page=25):
+def list_meetings(owner_id, filters=None, page=1, per_page=25):
+    """owner_id is a specific user's id, or the ALL_USERS sentinel for the
+    admin oversight view (no owner filter, plus the owner's name joined in).
+    """
     filters = filters or {}
     db = get_db()
-    where = ["user_id = ?"]
-    params = [user_id]
+    where = []
+    params = []
+    if owner_id != ALL_USERS:
+        where.append("meetings.user_id = ?")
+        params.append(owner_id)
     _apply_filters(where, params, filters)
-    where_sql = " AND ".join(where)
+    where_sql = " AND ".join(where) if where else "1=1"
 
     total = db.execute(
         f"SELECT COUNT(*) FROM meetings WHERE {where_sql}", params
@@ -36,8 +44,10 @@ def list_meetings(user_id, filters=None, page=1, per_page=25):
 
     offset = max(page - 1, 0) * per_page
     rows = db.execute(
-        f"""SELECT * FROM meetings WHERE {where_sql}
-            ORDER BY meeting_date DESC, meeting_time DESC, id DESC
+        f"""SELECT meetings.*, users.username AS owner_username, users.full_name AS owner_full_name
+            FROM meetings JOIN users ON users.id = meetings.user_id
+            WHERE {where_sql}
+            ORDER BY meetings.meeting_date DESC, meetings.meeting_time DESC, meetings.id DESC
             LIMIT ? OFFSET ?""",
         params + [per_page, offset],
     ).fetchall()
@@ -46,8 +56,23 @@ def list_meetings(user_id, filters=None, page=1, per_page=25):
 
 
 def get_meeting(user_id, meeting_id):
+    """Strictly owner-scoped lookup, used for edit/delete authorization
+    checks — never returns another user's meeting.
+    """
     return get_db().execute(
         "SELECT * FROM meetings WHERE id = ? AND user_id = ?", (meeting_id, user_id)
+    ).fetchone()
+
+
+def get_meeting_any(meeting_id):
+    """Admin oversight lookup: any meeting regardless of owner, with the
+    owner's name joined in for display. Read-only callers only.
+    """
+    return get_db().execute(
+        """SELECT meetings.*, users.username AS owner_username, users.full_name AS owner_full_name
+           FROM meetings JOIN users ON users.id = meetings.user_id
+           WHERE meetings.id = ?""",
+        (meeting_id,),
     ).fetchone()
 
 
@@ -116,34 +141,43 @@ def meetings_for_date(user_id, date_value):
     ).fetchall()
 
 
-def count_in_range(user_id, from_date, to_date):
+def count_in_range(owner_id, from_date, to_date):
     db = get_db()
-    where = ["user_id = ?"]
-    params = [user_id]
+    where = []
+    params = []
+    if owner_id != ALL_USERS:
+        where.append("user_id = ?")
+        params.append(owner_id)
     if from_date:
         where.append("meeting_date >= ?")
         params.append(format_date_for_db(from_date))
     if to_date:
         where.append("meeting_date <= ?")
         params.append(format_date_for_db(to_date))
-    where_sql = " AND ".join(where)
+    where_sql = " AND ".join(where) if where else "1=1"
     return db.execute(
         f"SELECT COUNT(*) FROM meetings WHERE {where_sql}", params
     ).fetchone()[0]
 
 
-def meetings_in_range(user_id, from_date, to_date):
+def meetings_in_range(owner_id, from_date, to_date):
+    """owner_id may be the ALL_USERS sentinel for an admin's cross-user report."""
     db = get_db()
-    where = ["user_id = ?"]
-    params = [user_id]
+    where = []
+    params = []
+    if owner_id != ALL_USERS:
+        where.append("meetings.user_id = ?")
+        params.append(owner_id)
     if from_date:
-        where.append("meeting_date >= ?")
+        where.append("meetings.meeting_date >= ?")
         params.append(format_date_for_db(from_date))
     if to_date:
-        where.append("meeting_date <= ?")
+        where.append("meetings.meeting_date <= ?")
         params.append(format_date_for_db(to_date))
-    where_sql = " AND ".join(where)
+    where_sql = " AND ".join(where) if where else "1=1"
     return db.execute(
-        f"SELECT * FROM meetings WHERE {where_sql} ORDER BY meeting_date DESC, meeting_time DESC",
+        f"""SELECT meetings.*, users.username AS owner_username, users.full_name AS owner_full_name
+            FROM meetings JOIN users ON users.id = meetings.user_id
+            WHERE {where_sql} ORDER BY meetings.meeting_date DESC, meetings.meeting_time DESC""",
         params,
     ).fetchall()

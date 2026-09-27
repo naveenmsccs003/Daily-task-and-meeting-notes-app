@@ -24,6 +24,9 @@
             <li><a href="{{ url_for('tasks.list_view') }}" class="{{ 'active' if request.blueprint == 'tasks' }}"><i class="bi bi-list-check"></i> Tasks</a></li>
             <li><a href="{{ url_for('meetings.list_view') }}" class="{{ 'active' if request.blueprint == 'meetings' }}"><i class="bi bi-people"></i> Meetings</a></li>
             <li><a href="{{ url_for('reports.index') }}" class="{{ 'active' if request.blueprint == 'reports' }}"><i class="bi bi-bar-chart"></i> Reports</a></li>
+            {% if current_user.is_admin %}
+            <li><a href="{{ url_for('users.list_view') }}" class="{{ 'active' if request.blueprint == 'users' }}"><i class="bi bi-people-fill"></i> Users</a></li>
+            {% endif %}
         </ul>
         <div class="sidebar-footer">
             <div class="sidebar-user"><i class="bi bi-person-circle"></i> {{ current_user.full_name or current_user.username }}</div>

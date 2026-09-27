@@ -32,6 +32,7 @@ def main():
             password=DEFAULT_PASSWORD,
             full_name="Administrator",
             email="",
+            role="admin",
         )
         print(f"Created user '{DEFAULT_USERNAME}' with password '{DEFAULT_PASSWORD}'.")
         print("IMPORTANT: change this password after your first login.")

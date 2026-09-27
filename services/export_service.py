@@ -28,33 +28,62 @@ TASK_HEADERS = ["Date", "Time", "Title", "Priority", "Status", "Due Date", "Note
 MEETING_HEADERS = ["Date", "Time", "Title", "My Points", "Meeting Points", "Decisions", "Notes"]
 
 
-def _task_row(t):
-    return [
+def _task_headers(show_owner):
+    headers = list(TASK_HEADERS)
+    if show_owner:
+        headers.insert(3, "Owner")
+    return headers
+
+
+def _meeting_headers(show_owner):
+    headers = list(MEETING_HEADERS)
+    if show_owner:
+        headers.insert(3, "Owner")
+    return headers
+
+
+def _owner_name(row):
+    return row["owner_full_name"] or row["owner_username"]
+
+
+def _task_row(t, show_owner=False):
+    row = [
         format_date_for_display(t["task_date"]),
         t["task_time"] or "",
         t["title"],
+    ]
+    if show_owner:
+        row.append(_owner_name(t))
+    row += [
         t["priority"],
         t["status"].replace("_", " ").title(),
         format_date_for_display(t["due_date"]) if t["due_date"] else "",
         t["notes"] or "",
     ]
+    return row
 
 
-def _meeting_row(m):
-    return [
+def _meeting_row(m, show_owner=False):
+    row = [
         format_date_for_display(m["meeting_date"]),
         m["meeting_time"] or "",
         m["title"],
+    ]
+    if show_owner:
+        row.append(_owner_name(m))
+    row += [
         m["my_points"] or "",
         m["meeting_points"] or "",
         m["decisions"] or "",
         m["notes"] or "",
     ]
+    return row
 
 
 # ---------------------------------------------------------------- Excel ----
 
 def generate_excel(report_data):
+    show_owner = report_data.get("show_owner", False)
     wb = Workbook()
 
     header_font = Font(bold=True, color="FFFFFF")
@@ -105,8 +134,8 @@ def generate_excel(report_data):
         ws.freeze_panes = "A2"
         return ws
 
-    build_sheet("Tasks", TASK_HEADERS, report_data["tasks"], _task_row)
-    build_sheet("Meetings", MEETING_HEADERS, report_data["meetings"], _meeting_row)
+    build_sheet("Tasks", _task_headers(show_owner), report_data["tasks"], lambda item: _task_row(item, show_owner))
+    build_sheet("Meetings", _meeting_headers(show_owner), report_data["meetings"], lambda item: _meeting_row(item, show_owner))
 
     buffer = io.BytesIO()
     wb.save(buffer)
@@ -117,20 +146,21 @@ def generate_excel(report_data):
 # ------------------------------------------------------------------ CSV ----
 
 def generate_csv_zip(report_data):
+    show_owner = report_data.get("show_owner", False)
     buffer = io.BytesIO()
     with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as zf:
         tasks_csv = io.StringIO()
         writer = csv.writer(tasks_csv)
-        writer.writerow(TASK_HEADERS)
+        writer.writerow(_task_headers(show_owner))
         for t in report_data["tasks"]:
-            writer.writerow(_task_row(t))
+            writer.writerow(_task_row(t, show_owner))
         zf.writestr("tasks.csv", tasks_csv.getvalue())
 
         meetings_csv = io.StringIO()
         writer = csv.writer(meetings_csv)
-        writer.writerow(MEETING_HEADERS)
+        writer.writerow(_meeting_headers(show_owner))
         for m in report_data["meetings"]:
-            writer.writerow(_meeting_row(m))
+            writer.writerow(_meeting_row(m, show_owner))
         zf.writestr("meetings.csv", meetings_csv.getvalue())
 
     buffer.seek(0)
@@ -149,6 +179,7 @@ def _add_page_number(canvas, doc):
 
 
 def generate_pdf(report_data):
+    show_owner = report_data.get("show_owner", False)
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(
         buffer,
@@ -205,10 +236,13 @@ def generate_pdf(report_data):
 
     story.append(Paragraph("Task Report", heading_style))
     if report_data["tasks"]:
-        data = [TASK_HEADERS] + [
-            [escape(str(v)) for v in _task_row(t)] for t in report_data["tasks"]
+        data = [_task_headers(show_owner)] + [
+            [escape(str(v)) for v in _task_row(t, show_owner)] for t in report_data["tasks"]
         ]
-        table = Table(data, repeatRows=1, colWidths=[0.7 * inch, 0.5 * inch, 1.6 * inch, 0.7 * inch, 0.9 * inch, 0.7 * inch, 2.5 * inch])
+        task_col_widths = [0.7 * inch, 0.5 * inch, 1.6 * inch, 0.7 * inch, 0.9 * inch, 0.7 * inch, 2.5 * inch]
+        if show_owner:
+            task_col_widths.insert(3, 1.0 * inch)
+        table = Table(data, repeatRows=1, colWidths=task_col_widths)
         table.setStyle(
             TableStyle(
                 [
@@ -228,10 +262,13 @@ def generate_pdf(report_data):
     story.append(Spacer(1, 16))
     story.append(Paragraph("Meeting Report", heading_style))
     if report_data["meetings"]:
-        data = [MEETING_HEADERS] + [
-            [escape(str(v)) for v in _meeting_row(m)] for m in report_data["meetings"]
+        data = [_meeting_headers(show_owner)] + [
+            [escape(str(v)) for v in _meeting_row(m, show_owner)] for m in report_data["meetings"]
         ]
-        table = Table(data, repeatRows=1, colWidths=[0.7 * inch, 0.5 * inch, 1.3 * inch, 1.4 * inch, 1.4 * inch, 1.4 * inch, 1.5 * inch])
+        meeting_col_widths = [0.7 * inch, 0.5 * inch, 1.3 * inch, 1.4 * inch, 1.4 * inch, 1.4 * inch, 1.5 * inch]
+        if show_owner:
+            meeting_col_widths.insert(3, 1.0 * inch)
+        table = Table(data, repeatRows=1, colWidths=meeting_col_widths)
         table.setStyle(
             TableStyle(
                 [

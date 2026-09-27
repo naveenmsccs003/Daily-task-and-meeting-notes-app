@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Users - Task &amp; Meeting Tracker{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Users</h1>
+    <a href="{{ url_for('users.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add User</a>
+</div>
+
+<div class="card panel">
+    {% if users %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr><th>Username</th><th>Full Name</th><th>Email</th><th>Role</th><th>Status</th><th>Actions</th></tr>
+            </thead>
+            <tbody>
+            {% for u in users %}
+                <tr>
+                    <td>{{ u.username }}{% if u.id == current_user.id %} <span class="text-muted small">(you)</span>{% endif %}</td>
+                    <td>{{ u.full_name or '-' }}</td>
+                    <td>{{ u.email or '-' }}</td>
+                    <td><span class="badge bg-{{ 'primary' if u.is_admin else 'secondary' }}">{{ u.role|title }}</span></td>
+                    <td><span class="badge bg-{{ 'success' if u.is_active else 'danger' }}">{{ 'Active' if u.is_active else 'Inactive' }}</span></td>
+                    <td class="task-actions">
+                        <a href="{{ url_for('users.edit', user_id=u.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
+                        {% if u.id != current_user.id %}
+                        <form method="post" action="{{ url_for('users.toggle_active', user_id=u.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-{{ 'danger' if u.is_active else 'success' }}" title="{{ 'Deactivate' if u.is_active else 'Activate' }}">
+                                <i class="bi bi-{{ 'slash-circle' if u.is_active else 'check-circle' }}"></i>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty-state">No users found.</p>
+    {% endif %}
+</div>
+{% endblock %}

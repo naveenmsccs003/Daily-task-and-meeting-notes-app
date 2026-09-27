@@ -1,7 +1,9 @@
 from flask import Blueprint, current_app, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from models import User
 from services import meeting_service
+from services.meeting_service import ALL_USERS
 from utils.date_utils import get_period_dates
 from utils.decorators import handle_errors
 from utils.helpers import json_error, json_success, wants_json
@@ -23,6 +25,18 @@ def _filters_from_request():
     }, period
 
 
+def _resolve_owner_scope():
+    if not current_user.is_admin:
+        return current_user.id, "me"
+
+    owner_param = request.args.get("owner", "me")
+    if owner_param == "all":
+        return ALL_USERS, "all"
+    if owner_param.isdigit():
+        return int(owner_param), owner_param
+    return current_user.id, "me"
+
+
 @meetings_bp.route("")
 @login_required
 def list_view():
@@ -35,8 +49,10 @@ def list_view():
     page = request.args.get("page", 1, type=int)
     per_page = current_app.config["MEETINGS_PER_PAGE"]
 
+    owner_id, owner_scope = _resolve_owner_scope()
+
     meetings, total = meeting_service.list_meetings(
-        current_user.id, filters, page=page, per_page=per_page
+        owner_id, filters, page=page, per_page=per_page
     )
     total_pages = max((total + per_page - 1) // per_page, 1)
 
@@ -48,6 +64,9 @@ def list_view():
         total_pages=total_pages,
         period=period,
         filters=request.args,
+        owner_scope=owner_scope,
+        show_owner_column=owner_id != current_user.id,
+        all_users=User.get_all() if current_user.is_admin else None,
     )
 
 
@@ -71,10 +90,14 @@ def create():
 @login_required
 def detail(meeting_id):
     meeting = meeting_service.get_meeting(current_user.id, meeting_id)
+    read_only = False
+    if not meeting and current_user.is_admin:
+        meeting = meeting_service.get_meeting_any(meeting_id)
+        read_only = True
     if not meeting:
         flash("Meeting not found.", "warning")
         return redirect(url_for("meetings.list_view"))
-    return render_template("meetings/detail.html", meeting=meeting)
+    return render_template("meetings/detail.html", meeting=meeting, read_only=read_only)
 
 
 @meetings_bp.route("/<int:meeting_id>/edit", methods=["GET", "POST"])

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import status_badge, priority_badge, status_select %}
+{% from "_macros.html" import status_badge, priority_badge, status_select, sort_th %}
 {% block title %}Tasks - Task &amp; Meeting Tracker{% endblock %}
 {% block content %}
 <div class="page-header">
@@ -32,6 +32,16 @@
     <input type="date" name="start_date" value="{{ filters.get('start_date', '') }}" class="form-control form-control-sm w-auto custom-range-field" {{ 'hidden' if period != 'custom' }}>
     <input type="date" name="end_date" value="{{ filters.get('end_date', '') }}" class="form-control form-control-sm w-auto custom-range-field" {{ 'hidden' if period != 'custom' }}>
 
+    {% if all_users is not none %}
+    <select name="owner" class="form-select form-select-sm w-auto" title="Whose tasks to show">
+        <option value="me" {{ 'selected' if owner_scope == 'me' }}>My Tasks</option>
+        <option value="all" {{ 'selected' if owner_scope == 'all' }}>All Users</option>
+        {% for u in all_users %}
+        <option value="{{ u.id }}" {{ 'selected' if owner_scope == u.id|string }}>{{ u.full_name or u.username }}</option>
+        {% endfor %}
+    </select>
+    {% endif %}
+
     <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
     <a href="{{ url_for('tasks.list_view') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
 </form>
@@ -46,19 +56,14 @@
         <table class="table table-sm align-middle mb-0">
             <thead>
                 <tr>
-                    {% for col, label in [('date', 'Date'), (none, 'Time'), (none, 'Task'), ('priority', 'Priority'), ('status', 'Status'), ('due_date', 'Due Date'), (none, 'Actions')] %}
-                    {% if col %}
-                    {% set next_dir = 'asc' if (sort == col and sort_dir == 'desc') else 'desc' %}
-                    <th>
-                        <a href="{{ url_for('tasks.list_view', sort=col, dir=next_dir, **qs) }}" class="sort-link">
-                            {{ label }}
-                            {% if sort == col %}<i class="bi bi-caret-{{ 'up' if sort_dir == 'asc' else 'down' }}-fill"></i>{% endif %}
-                        </a>
-                    </th>
-                    {% else %}
-                    <th>{{ label }}</th>
-                    {% endif %}
-                    {% endfor %}
+                    {{ sort_th('date', 'Date', sort, sort_dir, 'tasks.list_view', qs) }}
+                    <th>Time</th>
+                    <th>Task</th>
+                    {% if show_owner_column %}<th>Owner</th>{% endif %}
+                    {{ sort_th('priority', 'Priority', sort, sort_dir, 'tasks.list_view', qs) }}
+                    {{ sort_th('status', 'Status', sort, sort_dir, 'tasks.list_view', qs) }}
+                    {{ sort_th('due_date', 'Due Date', sort, sort_dir, 'tasks.list_view', qs) }}
+                    <th>Actions</th>
                 </tr>
             </thead>
             <tbody>
@@ -67,16 +72,25 @@
                     <td>{{ t.task_date|display_date }}</td>
                     <td>{{ t.task_time or '-' }}</td>
                     <td><a href="{{ url_for('tasks.detail', task_id=t.id) }}">{{ t.title }}</a></td>
+                    {% if show_owner_column %}<td>{{ t.owner_full_name or t.owner_username }}</td>{% endif %}
                     <td>{{ priority_badge(t.priority) }}</td>
-                    <td>{{ status_select(t.id, t.status, statuses) }}</td>
+                    <td>
+                        {% if t.user_id == current_user.id %}
+                        {{ status_select(t.id, t.status, statuses) }}
+                        {% else %}
+                        {{ status_badge(t.status) }}
+                        {% endif %}
+                    </td>
                     <td>{{ t.due_date|display_date if t.due_date else '-' }}</td>
                     <td class="task-actions">
                         <a href="{{ url_for('tasks.detail', task_id=t.id) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
+                        {% if t.user_id == current_user.id %}
                         <a href="{{ url_for('tasks.edit', task_id=t.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
                         <form method="post" action="{{ url_for('tasks.delete', task_id=t.id) }}" class="d-inline delete-form">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
                         </form>
+                        {% endif %}
                     </td>
                 </tr>
             {% endfor %}

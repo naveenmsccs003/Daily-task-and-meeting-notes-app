@@ -1,7 +1,9 @@
 from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required
 
+from models import User
 from services import export_service, report_service
+from services.task_service import ALL_USERS
 from utils.date_utils import format_date_for_db, get_period_dates
 from utils.helpers import safe_export_filename
 
@@ -16,6 +18,20 @@ def _resolve_range():
     return period, from_date, to_date
 
 
+def _resolve_owner_scope():
+    if not current_user.is_admin:
+        return current_user.id, "me", "My Data"
+
+    owner_param = request.args.get("owner", "me")
+    if owner_param == "all":
+        return ALL_USERS, "all", "All Users"
+    if owner_param.isdigit():
+        target = User.get_by_id(int(owner_param))
+        if target:
+            return target.id, owner_param, (target.full_name or target.username)
+    return current_user.id, "me", "My Data"
+
+
 @reports_bp.route("")
 @login_required
 def index():
@@ -25,7 +41,8 @@ def index():
         flash(str(exc), "danger")
         period, from_date, to_date = "month", *get_period_dates("month")
 
-    report = report_service.build_report(current_user.id, from_date, to_date)
+    owner_id, owner_scope, owner_label = _resolve_owner_scope()
+    report = report_service.build_report(owner_id, from_date, to_date)
 
     return render_template(
         "reports/index.html",
@@ -33,12 +50,16 @@ def index():
         period=period,
         from_date=format_date_for_db(from_date) if from_date else "",
         to_date=format_date_for_db(to_date) if to_date else "",
+        owner_scope=owner_scope,
+        owner_label=owner_label,
+        all_users=User.get_all() if current_user.is_admin else None,
     )
 
 
 def _report_for_export():
     period, from_date, to_date = _resolve_range()
-    return report_service.build_report(current_user.id, from_date, to_date)
+    owner_id, _owner_scope, _owner_label = _resolve_owner_scope()
+    return report_service.build_report(owner_id, from_date, to_date)
 
 
 @reports_bp.route("/export/excel")

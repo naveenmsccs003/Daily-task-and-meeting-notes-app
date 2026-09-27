@@ -1,12 +1,14 @@
 """Server-side validation. Never trust client-side validation alone."""
 import re
 
-from models import TASK_PRIORITIES, TASK_STATUSES
+from models import ROLES, TASK_PRIORITIES, TASK_STATUSES
 from utils.date_utils import parse_date
 
 TITLE_MAX = 255
 LONG_TEXT_MAX = 20000
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
+USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{3,50}$")
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def _err(errors, field, message):
@@ -100,4 +102,40 @@ def validate_custom_range(from_date, to_date):
         _err(errors, "to_date", "To Date is required and must be valid.")
     if f and t and f > t:
         _err(errors, "to_date", "From Date must be on or before To Date.")
+    return errors
+
+
+def validate_user_form(data, require_username=True, require_password=True):
+    """Shared validation for the admin-only create/edit user forms.
+
+    require_username: False on edit, since the username field is read-only there.
+    require_password: True on create; on edit a blank password means "keep current".
+    """
+    errors = {}
+
+    if require_username:
+        username = (data.get("username") or "").strip()
+        if not username:
+            _err(errors, "username", "Username is required.")
+        elif not USERNAME_RE.match(username):
+            _err(errors, "username", "Username must be 3-50 characters: letters, numbers, dot, dash, or underscore.")
+
+    password = data.get("password") or ""
+    if require_password and not password:
+        _err(errors, "password", "Password is required.")
+    elif password and len(password) < 8:
+        _err(errors, "password", "Password must be at least 8 characters.")
+
+    full_name = (data.get("full_name") or "").strip()
+    if len(full_name) > TITLE_MAX:
+        _err(errors, "full_name", f"Full name must be {TITLE_MAX} characters or fewer.")
+
+    email = (data.get("email") or "").strip()
+    if email and not EMAIL_RE.match(email):
+        _err(errors, "email", "Enter a valid email address.")
+
+    role = (data.get("role") or "").strip().lower()
+    if role not in ROLES:
+        _err(errors, "role", "Select a valid role.")
+
     return errors
