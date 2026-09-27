@@ -66,33 +66,160 @@ static/css, static/js   Styles and vanilla JS
 tests/                  pytest suite
 ```
 
-## Installation
+## Running the Application — Step-by-Step Guide
+
+This walks through everything from a bare checkout to a logged-in dashboard.
+Every command is run from a terminal, from inside the project folder
+(the folder this README is in).
+
+### Step 0: Prerequisites
+
+You need **Python 3.9 or newer**. Check what you have:
 
 ```bash
-python -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-pip install -r requirements.txt
-cp .env.example .env            # then edit SECRET_KEY for real deployments
-python init_db.py               # creates instance/database.db + admin user
-python app.py                   # runs on http://127.0.0.1:5000
+python3 --version
 ```
 
-Default login after `init_db.py`:
+If that prints `Python 3.9.x` or higher, you're set. If it's missing or too
+old, install Python from [python.org](https://www.python.org/downloads/) (on
+Windows, tick "Add Python to PATH" during install) and re-open your
+terminal. `pip` (Python's package installer) comes bundled with Python 3.4+,
+so you shouldn't need to install it separately.
+
+### Step 1: Open a terminal in the project folder
+
+- **macOS/Linux:** `cd` into the folder, e.g. `cd ~/path/to/daily-tracker`
+- **Windows:** open the folder in File Explorer, then right-click inside it
+  and choose "Open in Terminal" (or open PowerShell/cmd and `cd` there)
+
+Confirm you're in the right place — you should see `app.py` and
+`requirements.txt` when you list the folder (`ls` on macOS/Linux, `dir` on
+Windows).
+
+### Step 2: Create a virtual environment
+
+A virtual environment keeps this project's Python packages separate from
+everything else on your machine.
+
+```bash
+python3 -m venv venv
+```
+
+This creates a `venv/` folder inside the project. It only needs to be done
+once.
+
+### Step 3: Activate the virtual environment
+
+You need to do this **every time you open a new terminal** to work on the
+project (but not again within the same terminal session).
+
+| Platform | Command |
+|---|---|
+| macOS / Linux (bash/zsh) | `source venv/bin/activate` |
+| Windows (Command Prompt) | `venv\Scripts\activate.bat` |
+| Windows (PowerShell) | `venv\Scripts\Activate.ps1` |
+
+You'll know it worked because your terminal prompt now starts with
+`(venv)`. If PowerShell refuses to run the activation script with a
+"running scripts is disabled" error, run
+`Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` once, then try again.
+
+### Step 4: Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+This installs Flask and everything else listed in `requirements.txt`
+(Flask-Login, Flask-WTF, openpyxl, ReportLab, etc.) into the virtual
+environment. It takes a minute or two the first time.
+
+### Step 5: Configure environment variables
+
+```bash
+cp .env.example .env            # Windows: copy .env.example .env
+```
+
+Open the new `.env` file in any text editor. For trying the app out
+locally, the defaults work as-is. Before deploying anywhere real, change
+`SECRET_KEY` to a long random value (it signs login sessions and CSRF
+tokens) — see the **Configuration** section below for what each variable
+does.
+
+### Step 6: Initialize the database
+
+```bash
+python init_db.py
+```
+
+This creates `instance/database.db`, sets up all the tables and indexes,
+and — the first time only — creates a default login:
 
 - **Username:** `admin`
 - **Password:** `admin123`
 
-**Change this password immediately in any real deployment.**
+You'll see console output confirming this. The command is **safe to run
+again later** (e.g. after pulling an update that adds a new column) — it
+never drops or overwrites existing data, it only adds what's missing.
 
-### Optional: sample data
+**Change the `admin` password before using this anywhere but your own
+machine** — once logged in, go to **Users → edit your own account** and
+set a new password there (see **Multi-user & Roles** below).
+
+### Step 7 (optional): Load sample data
 
 ```bash
 python seed_data.py
 ```
 
-Adds a handful of tasks and meetings across different dates/statuses so the
-dashboard and reports are immediately testable. Do not run this against a
-production database.
+Adds about 10 sample tasks and 10 sample meetings across different dates,
+priorities, and statuses, so the Dashboard, Reports, and charts have
+something to show immediately. Skip this if you're setting up for real use
+— **never run it against a database you care about**, since it's meant for
+trying the app out, not for merging with real records.
+
+### Step 8: Start the application
+
+```bash
+python app.py
+```
+
+You should see output ending in something like:
+
+```
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+```
+
+Leave this terminal window open — it's running your server. Closing it (or
+pressing `Ctrl+C` in it) stops the application.
+
+### Step 9: Open it in your browser
+
+Go to **http://127.0.0.1:5000** in any modern browser (Chrome, Firefox,
+Edge, Safari). You should land on the login page. Sign in with the
+`admin` / `admin123` credentials from Step 6.
+
+On your first visit to the Dashboard, a short guided tour highlights the
+main areas of the app — you can skip it or replay it anytime via
+**"Take a Tour"** at the bottom of the sidebar.
+
+### Step 10: Stop the server when you're done
+
+Go back to the terminal running `python app.py` and press `Ctrl+C`.
+
+### Running it again later
+
+Every time after the first setup, starting the app is just two commands
+from the project folder:
+
+```bash
+source venv/bin/activate   # Windows: venv\Scripts\activate
+python app.py
+```
+
+There's no need to repeat Steps 2, 4, 5, or 6 — the virtual environment,
+installed packages, `.env` file, and database all persist between runs.
 
 ## Configuration
 
@@ -197,10 +324,11 @@ backup copy automatically; that is a manual step.
 - **CSRF errors on forms** — make sure `SECRET_KEY` is set and stable across requests (it's read from `.env`; don't change it while a session is active).
 - **Exports fail or produce empty files** — check the Flask log; export generation runs entirely in memory and any failure is logged server-side rather than shown to the user.
 
-## Future Improvements (not implemented in v1, by design)
+## Future Improvements (not implemented, by design)
 
 Email/push notifications, calendar integrations (Google/Outlook/Teams/Slack),
-a public REST API, multi-user role-based administration, and PostgreSQL
-migration are intentionally out of scope for this version but the
-architecture (service layer, `user_id` columns, centralized date utilities)
-leaves room to add them later without a rewrite.
+a public REST API, and PostgreSQL migration are intentionally out of scope
+for this project, but the architecture (service layer, `user_id`/`project_id`
+columns, centralized date utilities) leaves room to add them later without
+a rewrite. Multi-user accounts, roles, and admin oversight are already
+implemented — see **Multi-user & Roles** above.
