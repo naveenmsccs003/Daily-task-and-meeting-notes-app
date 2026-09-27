@@ -33,6 +33,22 @@
             </div>
 
             <div class="col-md-6">
+                <label for="project_id" class="form-label">Project</label>
+                <select class="form-select {{ 'is-invalid' if errors.project_id }}" id="project_id" name="project_id">
+                    <option value="">No Project</option>
+                    {% for p in all_projects %}
+                    <option value="{{ p.id }}" {{ 'selected' if (task.project_id|string) == p.id|string }}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+                {% if errors.project_id %}<div class="invalid-feedback">{{ errors.project_id }}</div>{% endif %}
+            </div>
+            <div class="col-md-6">
+                <label for="time_spent_hours" class="form-label">Time Spent (hours)</label>
+                <input type="number" step="0.25" min="0" max="999" class="form-control {{ 'is-invalid' if errors.time_spent_hours }}" id="time_spent_hours" name="time_spent_hours" value="{{ task.time_spent_hours if task.time_spent_hours is not none else '' }}" placeholder="e.g. 1.5">
+                {% if errors.time_spent_hours %}<div class="invalid-feedback">{{ errors.time_spent_hours }}</div>{% endif %}
+            </div>
+
+            <div class="col-md-6">
                 <label for="priority" class="form-label">Priority *</label>
                 <select class="form-select {{ 'is-invalid' if errors.priority }}" id="priority" name="priority" required>
                     {% for p in priorities %}

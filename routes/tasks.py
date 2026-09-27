@@ -2,7 +2,7 @@ from flask import Blueprint, current_app, flash, redirect, render_template, requ
 from flask_login import current_user, login_required
 
 from models import TASK_PRIORITIES, TASK_STATUSES, User
-from services import task_service
+from services import project_service, task_service
 from services.task_service import ALL_USERS
 from utils.date_utils import get_period_dates
 from utils.decorators import handle_errors
@@ -22,6 +22,7 @@ def _filters_from_request():
         "search": request.args.get("search", ""),
         "status": request.args.get("status", ""),
         "priority": request.args.get("priority", ""),
+        "project_id": request.args.get("project_id", "", type=int) or None,
         "from_date": from_date,
         "to_date": to_date,
     }, period
@@ -79,6 +80,7 @@ def list_view():
         owner_scope=owner_scope,
         show_owner_column=owner_id != current_user.id,
         all_users=User.get_all() if current_user.is_admin else None,
+        all_projects=project_service.list_projects(include_archived=False),
     )
 
 
@@ -86,6 +88,8 @@ def list_view():
 @login_required
 @handle_errors("Unable to create task.")
 def create():
+    all_projects = project_service.list_projects(include_archived=False)
+
     if request.method == "POST":
         errors = validate_task(request.form)
         if not errors:
@@ -96,11 +100,12 @@ def create():
         return render_template(
             "tasks/form.html", task=request.form, errors=errors,
             priorities=TASK_PRIORITIES, statuses=TASK_STATUSES, mode="create",
+            all_projects=all_projects,
         )
 
     return render_template(
         "tasks/form.html", task={}, errors={}, priorities=TASK_PRIORITIES,
-        statuses=TASK_STATUSES, mode="create",
+        statuses=TASK_STATUSES, mode="create", all_projects=all_projects,
     )
 
 
@@ -127,6 +132,8 @@ def edit(task_id):
         flash("Task not found.", "warning")
         return redirect(url_for("tasks.list_view"))
 
+    all_projects = project_service.list_projects(include_archived=False)
+
     if request.method == "POST":
         errors = validate_task(request.form)
         if not errors:
@@ -137,11 +144,13 @@ def edit(task_id):
         return render_template(
             "tasks/form.html", task=request.form, errors=errors, task_id=task_id,
             priorities=TASK_PRIORITIES, statuses=TASK_STATUSES, mode="edit",
+            all_projects=all_projects,
         )
 
     return render_template(
         "tasks/form.html", task=task, errors={}, task_id=task_id,
         priorities=TASK_PRIORITIES, statuses=TASK_STATUSES, mode="edit",
+        all_projects=all_projects,
     )
 
 

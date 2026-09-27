@@ -9,6 +9,8 @@ LONG_TEXT_MAX = 20000
 TIME_RE = re.compile(r"^([01]\d|2[0-3]):([0-5]\d)$")
 USERNAME_RE = re.compile(r"^[A-Za-z0-9_.-]{3,50}$")
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+HEX_COLOR_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
+MAX_TIME_SPENT_HOURS = 999
 
 
 def _err(errors, field, message):
@@ -58,6 +60,19 @@ def validate_task(data):
     if len(notes) > LONG_TEXT_MAX:
         _err(errors, "notes", "Notes are too long.")
 
+    time_spent = (data.get("time_spent_hours") or "").strip()
+    if time_spent:
+        try:
+            value = float(time_spent)
+            if value < 0 or value > MAX_TIME_SPENT_HOURS:
+                _err(errors, "time_spent_hours", f"Enter a value between 0 and {MAX_TIME_SPENT_HOURS}.")
+        except ValueError:
+            _err(errors, "time_spent_hours", "Time spent must be a number (e.g. 1.5).")
+
+    project_id = (data.get("project_id") or "").strip()
+    if project_id and not project_id.isdigit():
+        _err(errors, "project_id", "Select a valid project.")
+
     return errors
 
 
@@ -88,6 +103,10 @@ def validate_meeting(data):
         value = data.get(field) or ""
         if len(value) > LONG_TEXT_MAX:
             _err(errors, field, "This field is too long.")
+
+    project_id = (data.get("project_id") or "").strip()
+    if project_id and not project_id.isdigit():
+        _err(errors, "project_id", "Select a valid project.")
 
     return errors
 
@@ -137,5 +156,25 @@ def validate_user_form(data, require_username=True, require_password=True):
     role = (data.get("role") or "").strip().lower()
     if role not in ROLES:
         _err(errors, "role", "Select a valid role.")
+
+    return errors
+
+
+def validate_project_form(data):
+    errors = {}
+
+    name = (data.get("name") or "").strip()
+    if not name:
+        _err(errors, "name", "Project name is required.")
+    elif len(name) > TITLE_MAX:
+        _err(errors, "name", f"Project name must be {TITLE_MAX} characters or fewer.")
+
+    description = data.get("description") or ""
+    if len(description) > LONG_TEXT_MAX:
+        _err(errors, "description", "Description is too long.")
+
+    color = (data.get("color") or "").strip()
+    if color and not HEX_COLOR_RE.match(color):
+        _err(errors, "color", "Color must be a hex value like #4f46e5.")
 
     return errors

@@ -27,6 +27,17 @@
                 {% if errors.title %}<div class="invalid-feedback">{{ errors.title }}</div>{% endif %}
             </div>
 
+            <div class="col-md-6">
+                <label for="project_id" class="form-label">Project</label>
+                <select class="form-select {{ 'is-invalid' if errors.project_id }}" id="project_id" name="project_id">
+                    <option value="">No Project</option>
+                    {% for p in all_projects %}
+                    <option value="{{ p.id }}" {{ 'selected' if (meeting.project_id|string) == p.id|string }}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+                {% if errors.project_id %}<div class="invalid-feedback">{{ errors.project_id }}</div>{% endif %}
+            </div>
+
             <div class="col-12">
                 <label for="my_points" class="form-label">My Points</label>
                 <textarea class="form-control {{ 'is-invalid' if errors.my_points }}" id="my_points" name="my_points" rows="3">{{ meeting.my_points or '' }}</textarea>

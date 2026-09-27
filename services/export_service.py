@@ -24,21 +24,21 @@ from reportlab.platypus import (
 
 from utils.date_utils import format_date_for_display
 
-TASK_HEADERS = ["Date", "Time", "Title", "Priority", "Status", "Due Date", "Notes"]
-MEETING_HEADERS = ["Date", "Time", "Title", "My Points", "Meeting Points", "Decisions", "Notes"]
+TASK_HEADERS = ["Date", "Time", "Title", "Project", "Priority", "Status", "Due Date", "Hours", "Notes"]
+MEETING_HEADERS = ["Date", "Time", "Title", "Project", "My Points", "Meeting Points", "Decisions", "Notes"]
 
 
 def _task_headers(show_owner):
     headers = list(TASK_HEADERS)
     if show_owner:
-        headers.insert(3, "Owner")
+        headers.insert(4, "Owner")
     return headers
 
 
 def _meeting_headers(show_owner):
     headers = list(MEETING_HEADERS)
     if show_owner:
-        headers.insert(3, "Owner")
+        headers.insert(4, "Owner")
     return headers
 
 
@@ -46,11 +46,16 @@ def _owner_name(row):
     return row["owner_full_name"] or row["owner_username"]
 
 
+def _project_name(row):
+    return row["project_name"] or ""
+
+
 def _task_row(t, show_owner=False):
     row = [
         format_date_for_display(t["task_date"]),
         t["task_time"] or "",
         t["title"],
+        _project_name(t),
     ]
     if show_owner:
         row.append(_owner_name(t))
@@ -58,6 +63,7 @@ def _task_row(t, show_owner=False):
         t["priority"],
         t["status"].replace("_", " ").title(),
         format_date_for_display(t["due_date"]) if t["due_date"] else "",
+        t["time_spent_hours"] if t["time_spent_hours"] is not None else "",
         t["notes"] or "",
     ]
     return row
@@ -68,6 +74,7 @@ def _meeting_row(m, show_owner=False):
         format_date_for_display(m["meeting_date"]),
         m["meeting_time"] or "",
         m["title"],
+        _project_name(m),
     ]
     if show_owner:
         row.append(_owner_name(m))
@@ -105,6 +112,7 @@ def generate_excel(report_data):
         ("Cancelled", report_data["summary"]["cancelled"]),
         ("Overdue", report_data["summary"]["overdue"]),
         ("Total Meetings", report_data["summary"]["total_meetings"]),
+        ("Total Hours Logged", report_data["summary"]["total_time_spent"]),
     ]
     start_row = 5
     summary_ws.cell(row=start_row, column=1, value="Metric").font = header_font
@@ -204,7 +212,7 @@ def generate_pdf(report_data):
 
     summary = report_data["summary"]
     summary_table_data = [
-        ["Total Tasks", "Completed", "In Progress", "TODO", "On Hold", "Cancelled", "Overdue", "Meetings"],
+        ["Total Tasks", "Completed", "In Progress", "TODO", "On Hold", "Cancelled", "Overdue", "Meetings", "Hours Logged"],
         [
             summary["total_tasks"],
             summary["completed"],
@@ -214,6 +222,7 @@ def generate_pdf(report_data):
             summary["cancelled"],
             summary["overdue"],
             summary["total_meetings"],
+            summary["total_time_spent"],
         ],
     ]
     summary_table = Table(summary_table_data, hAlign="LEFT")
@@ -239,9 +248,9 @@ def generate_pdf(report_data):
         data = [_task_headers(show_owner)] + [
             [escape(str(v)) for v in _task_row(t, show_owner)] for t in report_data["tasks"]
         ]
-        task_col_widths = [0.7 * inch, 0.5 * inch, 1.6 * inch, 0.7 * inch, 0.9 * inch, 0.7 * inch, 2.5 * inch]
+        task_col_widths = [0.7 * inch, 0.5 * inch, 1.4 * inch, 1.0 * inch, 0.7 * inch, 0.9 * inch, 0.7 * inch, 0.5 * inch, 2.1 * inch]
         if show_owner:
-            task_col_widths.insert(3, 1.0 * inch)
+            task_col_widths.insert(4, 1.0 * inch)
         table = Table(data, repeatRows=1, colWidths=task_col_widths)
         table.setStyle(
             TableStyle(
@@ -265,9 +274,9 @@ def generate_pdf(report_data):
         data = [_meeting_headers(show_owner)] + [
             [escape(str(v)) for v in _meeting_row(m, show_owner)] for m in report_data["meetings"]
         ]
-        meeting_col_widths = [0.7 * inch, 0.5 * inch, 1.3 * inch, 1.4 * inch, 1.4 * inch, 1.4 * inch, 1.5 * inch]
+        meeting_col_widths = [0.7 * inch, 0.5 * inch, 1.2 * inch, 0.9 * inch, 1.3 * inch, 1.3 * inch, 1.3 * inch, 1.3 * inch]
         if show_owner:
-            meeting_col_widths.insert(3, 1.0 * inch)
+            meeting_col_widths.insert(4, 0.9 * inch)
         table = Table(data, repeatRows=1, colWidths=meeting_col_widths)
         table.setStyle(
             TableStyle(

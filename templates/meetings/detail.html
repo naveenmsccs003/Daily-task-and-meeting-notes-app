@@ -24,6 +24,7 @@
 <div class="card panel detail-panel">
     <dl class="detail-list">
         <dt>Date</dt><dd>{{ meeting.meeting_date|display_date }} {{ meeting.meeting_time or '' }}</dd>
+        <dt>Project</dt><dd>{% if meeting.project_name %}<span class="project-badge"><span class="project-dot" style="background:{{ meeting.project_color }}"></span>{{ meeting.project_name }}</span>{% else %}-{% endif %}</dd>
         <dt>My Points</dt><dd class="prewrap">{{ meeting.my_points or '-' }}</dd>
         <dt>Meeting Points</dt><dd class="prewrap">{{ meeting.meeting_points or '-' }}</dd>
         <dt>Decisions</dt><dd class="prewrap">{{ meeting.decisions or '-' }}</dd>

@@ -24,6 +24,13 @@
         {% endfor %}
     </select>
 
+    <select name="project_id" class="form-select form-select-sm w-auto">
+        <option value="">All Projects</option>
+        {% for p in all_projects %}
+        <option value="{{ p.id }}" {{ 'selected' if filters.get('project_id')|string == p.id|string }}>{{ p.name }}</option>
+        {% endfor %}
+    </select>
+
     <select name="period" class="form-select form-select-sm w-auto" id="periodSelect">
         {% for value, label in [('all','All Time'), ('today','Today'), ('week','This Week'), ('month','This Month'), ('3months','Last 3 Months'), ('6months','Last 6 Months'), ('year','This Year'), ('custom','Custom')] %}
         <option value="{{ value }}" {{ 'selected' if period == value }}>{{ label }}</option>
@@ -59,6 +66,7 @@
                     {{ sort_th('date', 'Date', sort, sort_dir, 'tasks.list_view', qs) }}
                     <th>Time</th>
                     <th>Task</th>
+                    <th>Project</th>
                     {% if show_owner_column %}<th>Owner</th>{% endif %}
                     {{ sort_th('priority', 'Priority', sort, sort_dir, 'tasks.list_view', qs) }}
                     {{ sort_th('status', 'Status', sort, sort_dir, 'tasks.list_view', qs) }}
@@ -72,6 +80,7 @@
                     <td>{{ t.task_date|display_date }}</td>
                     <td>{{ t.task_time or '-' }}</td>
                     <td><a href="{{ url_for('tasks.detail', task_id=t.id) }}">{{ t.title }}</a></td>
+                    <td>{% if t.project_name %}<span class="project-dot" style="background:{{ t.project_color }}"></span>{{ t.project_name }}{% else %}-{% endif %}</td>
                     {% if show_owner_column %}<td>{{ t.owner_full_name or t.owner_username }}</td>{% endif %}
                     <td>{{ priority_badge(t.priority) }}</td>
                     <td>

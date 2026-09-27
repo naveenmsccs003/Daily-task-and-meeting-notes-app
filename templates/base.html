@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <script>
+    (function () {
+        try {
+            if (localStorage.getItem('dtmt_theme') === 'dark') {
+                document.documentElement.setAttribute('data-bs-theme', 'dark');
+            }
+        } catch (e) { /* private mode: ignore, default light stays */ }
+    })();
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
@@ -23,6 +32,7 @@
             <li><a href="{{ url_for('dashboard.index') }}" class="{{ 'active' if request.endpoint == 'dashboard.index' }}"><i class="bi bi-speedometer2"></i> Dashboard</a></li>
             <li><a href="{{ url_for('tasks.list_view') }}" class="{{ 'active' if request.blueprint == 'tasks' }}"><i class="bi bi-list-check"></i> Tasks</a></li>
             <li><a href="{{ url_for('meetings.list_view') }}" class="{{ 'active' if request.blueprint == 'meetings' }}"><i class="bi bi-people"></i> Meetings</a></li>
+            <li><a href="{{ url_for('projects.list_view') }}" class="{{ 'active' if request.blueprint == 'projects' }}"><i class="bi bi-kanban"></i> Projects</a></li>
             <li><a href="{{ url_for('reports.index') }}" class="{{ 'active' if request.blueprint == 'reports' }}"><i class="bi bi-bar-chart"></i> Reports</a></li>
             {% if current_user.is_admin %}
             <li><a href="{{ url_for('users.list_view') }}" class="{{ 'active' if request.blueprint == 'users' }}"><i class="bi bi-people-fill"></i> Users</a></li>
@@ -30,6 +40,9 @@
         </ul>
         <div class="sidebar-footer">
             <div class="sidebar-user"><i class="bi bi-person-circle"></i> {{ current_user.full_name or current_user.username }}</div>
+            <button type="button" id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle light/dark theme">
+                <i class="bi bi-moon-stars" id="themeToggleIcon"></i> <span id="themeToggleLabel">Dark Mode</span>
+            </button>
             <a href="#" id="startTourBtn" class="sidebar-tour-link"><i class="bi bi-info-circle"></i> Take a Tour</a>
             <a href="{{ url_for('auth.logout') }}" class="sidebar-logout"><i class="bi bi-box-arrow-right"></i> Logout</a>
         </div>
@@ -56,6 +69,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
 <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script src="{{ url_for('static', filename='js/theme.js') }}"></script>
 {% if current_user.is_authenticated %}
 <script src="{{ url_for('static', filename='js/tour.js') }}"></script>
 {% endif %}

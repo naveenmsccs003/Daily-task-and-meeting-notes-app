@@ -23,6 +23,16 @@ def _apply_filters(where, params, filters):
         where.append("meetings.meeting_date <= ?")
         params.append(format_date_for_db(to_date))
 
+    project_id = filters.get("project_id")
+    if project_id:
+        where.append("meetings.project_id = ?")
+        params.append(project_id)
+
+
+def _parse_project_id(data):
+    raw = (data.get("project_id") or "").strip()
+    return int(raw) if raw.isdigit() else None
+
 
 def list_meetings(owner_id, filters=None, page=1, per_page=25):
     """owner_id is a specific user's id, or the ALL_USERS sentinel for the
@@ -44,8 +54,11 @@ def list_meetings(owner_id, filters=None, page=1, per_page=25):
 
     offset = max(page - 1, 0) * per_page
     rows = db.execute(
-        f"""SELECT meetings.*, users.username AS owner_username, users.full_name AS owner_full_name
-            FROM meetings JOIN users ON users.id = meetings.user_id
+        f"""SELECT meetings.*, users.username AS owner_username, users.full_name AS owner_full_name,
+                   projects.name AS project_name, projects.color AS project_color
+            FROM meetings
+            JOIN users ON users.id = meetings.user_id
+            LEFT JOIN projects ON projects.id = meetings.project_id
             WHERE {where_sql}
             ORDER BY meetings.meeting_date DESC, meetings.meeting_time DESC, meetings.id DESC
             LIMIT ? OFFSET ?""",
@@ -60,7 +73,10 @@ def get_meeting(user_id, meeting_id):
     checks — never returns another user's meeting.
     """
     return get_db().execute(
-        "SELECT * FROM meetings WHERE id = ? AND user_id = ?", (meeting_id, user_id)
+        """SELECT meetings.*, projects.name AS project_name, projects.color AS project_color
+           FROM meetings LEFT JOIN projects ON projects.id = meetings.project_id
+           WHERE meetings.id = ? AND meetings.user_id = ?""",
+        (meeting_id, user_id),
     ).fetchone()
 
 
@@ -69,8 +85,11 @@ def get_meeting_any(meeting_id):
     owner's name joined in for display. Read-only callers only.
     """
     return get_db().execute(
-        """SELECT meetings.*, users.username AS owner_username, users.full_name AS owner_full_name
-           FROM meetings JOIN users ON users.id = meetings.user_id
+        """SELECT meetings.*, users.username AS owner_username, users.full_name AS owner_full_name,
+                  projects.name AS project_name, projects.color AS project_color
+           FROM meetings
+           JOIN users ON users.id = meetings.user_id
+           LEFT JOIN projects ON projects.id = meetings.project_id
            WHERE meetings.id = ?""",
         (meeting_id,),
     ).fetchone()
@@ -80,11 +99,12 @@ def create_meeting(user_id, data):
     db = get_db()
     cur = db.execute(
         """INSERT INTO meetings
-           (user_id, meeting_date, meeting_time, title, my_points,
+           (user_id, project_id, meeting_date, meeting_time, title, my_points,
             meeting_points, decisions, notes)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             user_id,
+            _parse_project_id(data),
             data["meeting_date"],
             data.get("meeting_time") or None,
             data["title"].strip(),
@@ -103,11 +123,12 @@ def update_meeting(user_id, meeting_id, data):
     if not get_meeting(user_id, meeting_id):
         return False
     db.execute(
-        """UPDATE meetings SET meeting_date=?, meeting_time=?, title=?,
+        """UPDATE meetings SET project_id=?, meeting_date=?, meeting_time=?, title=?,
            my_points=?, meeting_points=?, decisions=?, notes=?,
            updated_at=datetime('now')
            WHERE id=? AND user_id=?""",
         (
+            _parse_project_id(data),
             data["meeting_date"],
             data.get("meeting_time") or None,
             data["title"].strip(),
@@ -160,7 +181,7 @@ def count_in_range(owner_id, from_date, to_date):
     ).fetchone()[0]
 
 
-def meetings_in_range(owner_id, from_date, to_date):
+def meetings_in_range(owner_id, from_date, to_date, project_id=None):
     """owner_id may be the ALL_USERS sentinel for an admin's cross-user report."""
     db = get_db()
     where = []
@@ -174,10 +195,16 @@ def meetings_in_range(owner_id, from_date, to_date):
     if to_date:
         where.append("meetings.meeting_date <= ?")
         params.append(format_date_for_db(to_date))
+    if project_id:
+        where.append("meetings.project_id = ?")
+        params.append(project_id)
     where_sql = " AND ".join(where) if where else "1=1"
     return db.execute(
-        f"""SELECT meetings.*, users.username AS owner_username, users.full_name AS owner_full_name
-            FROM meetings JOIN users ON users.id = meetings.user_id
+        f"""SELECT meetings.*, users.username AS owner_username, users.full_name AS owner_full_name,
+                   projects.name AS project_name, projects.color AS project_color
+            FROM meetings
+            JOIN users ON users.id = meetings.user_id
+            LEFT JOIN projects ON projects.id = meetings.project_id
             WHERE {where_sql} ORDER BY meetings.meeting_date DESC, meetings.meeting_time DESC""",
         params,
     ).fetchall()

@@ -17,6 +17,13 @@
     <input type="date" name="start_date" value="{{ filters.get('start_date', '') }}" class="form-control form-control-sm w-auto custom-range-field" {{ 'hidden' if period != 'custom' }}>
     <input type="date" name="end_date" value="{{ filters.get('end_date', '') }}" class="form-control form-control-sm w-auto custom-range-field" {{ 'hidden' if period != 'custom' }}>
 
+    <select name="project_id" class="form-select form-select-sm w-auto">
+        <option value="">All Projects</option>
+        {% for p in all_projects %}
+        <option value="{{ p.id }}" {{ 'selected' if filters.get('project_id')|string == p.id|string }}>{{ p.name }}</option>
+        {% endfor %}
+    </select>
+
     {% if all_users is not none %}
     <select name="owner" class="form-select form-select-sm w-auto" title="Whose meetings to show">
         <option value="me" {{ 'selected' if owner_scope == 'me' }}>My Meetings</option>
@@ -35,13 +42,14 @@
     {% if meetings %}
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-            <thead><tr><th>Date</th><th>Time</th><th>Title</th>{% if show_owner_column %}<th>Owner</th>{% endif %}<th>Decisions</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Date</th><th>Time</th><th>Title</th><th>Project</th>{% if show_owner_column %}<th>Owner</th>{% endif %}<th>Decisions</th><th>Actions</th></tr></thead>
             <tbody>
             {% for m in meetings %}
                 <tr>
                     <td>{{ m.meeting_date|display_date }}</td>
                     <td>{{ m.meeting_time or '-' }}</td>
                     <td><a href="{{ url_for('meetings.detail', meeting_id=m.id) }}">{{ m.title }}</a></td>
+                    <td>{% if m.project_name %}<span class="project-dot" style="background:{{ m.project_color }}"></span>{{ m.project_name }}{% else %}-{% endif %}</td>
                     {% if show_owner_column %}<td>{{ m.owner_full_name or m.owner_username }}</td>{% endif %}
                     <td>{{ (m.decisions or '-')|truncate(60) }}</td>
                     <td class="task-actions">

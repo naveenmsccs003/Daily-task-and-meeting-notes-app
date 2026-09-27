@@ -25,9 +25,11 @@
 <div class="card panel detail-panel">
     <dl class="detail-list">
         <dt>Date</dt><dd>{{ task.task_date|display_date }} {{ task.task_time or '' }}</dd>
+        <dt>Project</dt><dd>{% if task.project_name %}<span class="project-badge"><span class="project-dot" style="background:{{ task.project_color }}"></span>{{ task.project_name }}</span>{% else %}-{% endif %}</dd>
         <dt>Priority</dt><dd>{{ priority_badge(task.priority) }}</dd>
         <dt>Status</dt><dd>{{ status_badge(task.status) }}</dd>
         <dt>Due Date</dt><dd>{{ task.due_date|display_date if task.due_date else '-' }}</dd>
+        <dt>Time Spent</dt><dd>{{ (task.time_spent_hours ~ ' hrs') if task.time_spent_hours is not none else '-' }}</dd>
         <dt>Description</dt><dd>{{ task.description or '-' }}</dd>
         <dt>Notes</dt><dd>{{ task.notes or '-' }}</dd>
         <dt>Created</dt><dd>{{ task.created_at }}</dd>

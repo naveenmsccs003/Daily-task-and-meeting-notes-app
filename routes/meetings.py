@@ -2,7 +2,7 @@ from flask import Blueprint, current_app, flash, redirect, render_template, requ
 from flask_login import current_user, login_required
 
 from models import User
-from services import meeting_service
+from services import meeting_service, project_service
 from services.meeting_service import ALL_USERS
 from utils.date_utils import get_period_dates
 from utils.decorators import handle_errors
@@ -20,6 +20,7 @@ def _filters_from_request():
 
     return {
         "search": request.args.get("search", ""),
+        "project_id": request.args.get("project_id", "", type=int) or None,
         "from_date": from_date,
         "to_date": to_date,
     }, period
@@ -67,6 +68,7 @@ def list_view():
         owner_scope=owner_scope,
         show_owner_column=owner_id != current_user.id,
         all_users=User.get_all() if current_user.is_admin else None,
+        all_projects=project_service.list_projects(include_archived=False),
     )
 
 
@@ -74,6 +76,8 @@ def list_view():
 @login_required
 @handle_errors("Unable to create meeting.")
 def create():
+    all_projects = project_service.list_projects(include_archived=False)
+
     if request.method == "POST":
         errors = validate_meeting(request.form)
         if not errors:
@@ -81,9 +85,14 @@ def create():
             flash("Meeting created successfully.", "success")
             return redirect(url_for("meetings.list_view"))
         flash("Please correct the errors below.", "danger")
-        return render_template("meetings/form.html", meeting=request.form, errors=errors, mode="create")
+        return render_template(
+            "meetings/form.html", meeting=request.form, errors=errors, mode="create",
+            all_projects=all_projects,
+        )
 
-    return render_template("meetings/form.html", meeting={}, errors={}, mode="create")
+    return render_template(
+        "meetings/form.html", meeting={}, errors={}, mode="create", all_projects=all_projects
+    )
 
 
 @meetings_bp.route("/<int:meeting_id>")
@@ -109,6 +118,8 @@ def edit(meeting_id):
         flash("Meeting not found.", "warning")
         return redirect(url_for("meetings.list_view"))
 
+    all_projects = project_service.list_projects(include_archived=False)
+
     if request.method == "POST":
         errors = validate_meeting(request.form)
         if not errors:
@@ -118,11 +129,12 @@ def edit(meeting_id):
         flash("Please correct the errors below.", "danger")
         return render_template(
             "meetings/form.html", meeting=request.form, errors=errors,
-            meeting_id=meeting_id, mode="edit",
+            meeting_id=meeting_id, mode="edit", all_projects=all_projects,
         )
 
     return render_template(
-        "meetings/form.html", meeting=meeting, errors={}, meeting_id=meeting_id, mode="edit"
+        "meetings/form.html", meeting=meeting, errors={}, meeting_id=meeting_id, mode="edit",
+        all_projects=all_projects,
     )
 
 

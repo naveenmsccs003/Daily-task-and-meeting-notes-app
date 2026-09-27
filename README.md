@@ -18,6 +18,9 @@ easy to maintain.
 - **Responsive UI** — dark sidebar / light content, Bootstrap 5, works on desktop, tablet, and mobile
 - **Onboarding tour** — a short guided tour auto-plays on a user's first Dashboard visit; replay anytime via "Take a Tour" in the sidebar
 - **Multi-user & roles** — admins can create/deactivate user accounts from a Users page and get read-only oversight of everyone's tasks/meetings/reports; regular users only ever see and edit their own data (see **Multi-user & Roles** below)
+- **Projects** — a shared, taggable project list; tag any task or meeting with a project, then filter/report by project everywhere (Tasks, Meetings, Reports, exports)
+- **Time tracking** — log hours spent per task; totaled in Reports and included in every export
+- **Light/dark theme** — a sidebar toggle switches the whole app (via Bootstrap 5.3's built-in dark mode); the choice is remembered per browser and applied instantly on load with no flash of the wrong theme
 
 ## Technology Stack
 
@@ -127,6 +130,24 @@ in place, so no data is lost.
 - **Safety guards:** an admin can never deactivate or demote their own
   account (to avoid self-lockout), and the last remaining active admin
   cannot be deactivated or demoted by anyone.
+
+## Projects & Time Tracking
+
+Projects are a **shared taxonomy**, not per-user private data: any logged-in
+user can create, edit, and archive a project from the **Projects** page, and
+any user can tag their own tasks or meetings with any active project. This
+is a deliberate simplicity choice — projects behave like a shared label
+list (e.g. "Website Redesign", "Q4 Launch") rather than requiring an admin
+to provision them first. Archiving a project (instead of deleting it) keeps
+historical tasks/meetings intact; deleting a project outright would need to
+either block on existing references or silently detach them, which the
+"soft delete" pattern avoids.
+
+Tasks also carry an optional **Time Spent (hours)** field. It's a simple
+actual-hours-logged number (not a start/stop timer or an estimate-vs-actual
+split) — enter it when you complete or update a task. Reports show a
+**Hours Logged** total for the selected date range/project/user scope, and
+every export (Excel, CSV, PDF) includes the Project and Hours columns.
 
 ## Running Tests
 

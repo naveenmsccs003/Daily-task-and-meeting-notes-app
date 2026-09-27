@@ -7,7 +7,7 @@
 .summary-cards-compact { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
 
 .summary-card {
-    background: #fff;
+    background: var(--panel-bg);
     border: 1px solid var(--border-color);
     border-left: 4px solid var(--accent);
     border-radius: 10px;

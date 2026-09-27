@@ -21,7 +21,7 @@ def close_db(e=None):
         db.close()
 
 
-SCHEMA = """
+TABLES_SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
@@ -34,9 +34,22 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
+CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    color TEXT NOT NULL DEFAULT '#4f46e5',
+    is_active INTEGER NOT NULL DEFAULT 1,
+    created_by INTEGER,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (created_by) REFERENCES users (id) ON DELETE SET NULL
+);
+
 CREATE TABLE IF NOT EXISTS tasks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
+    project_id INTEGER,
     task_date TEXT NOT NULL,
     task_time TEXT,
     title TEXT NOT NULL,
@@ -45,15 +58,18 @@ CREATE TABLE IF NOT EXISTS tasks (
     status TEXT NOT NULL DEFAULT 'TODO',
     due_date TEXT,
     notes TEXT,
+    time_spent_hours REAL,
     completed_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS meetings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
+    project_id INTEGER,
     meeting_date TEXT NOT NULL,
     meeting_time TEXT,
     title TEXT NOT NULL,
@@ -63,16 +79,25 @@ CREATE TABLE IF NOT EXISTS meetings (
     notes TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE SET NULL
 );
+"""
 
+# Kept separate from TABLES_SCHEMA and applied *after* _migrate(): an index
+# on a column added by migration (project_id, time_spent_hours) would fail
+# with "no such column" if created in the same pass as CREATE TABLE for a
+# database where that table already existed pre-migration.
+INDEXES_SCHEMA = """
 CREATE INDEX IF NOT EXISTS idx_tasks_task_date ON tasks (task_date);
 CREATE INDEX IF NOT EXISTS idx_tasks_status ON tasks (status);
 CREATE INDEX IF NOT EXISTS idx_tasks_priority ON tasks (priority);
 CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks (due_date);
 CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks (user_id);
+CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks (project_id);
 CREATE INDEX IF NOT EXISTS idx_meetings_meeting_date ON meetings (meeting_date);
 CREATE INDEX IF NOT EXISTS idx_meetings_user_id ON meetings (user_id);
+CREATE INDEX IF NOT EXISTS idx_meetings_project_id ON meetings (project_id);
 """
 
 
@@ -82,12 +107,23 @@ def _migrate(conn):
     existing table, so new columns have to be added explicitly. Safe to
     re-run: each ALTER is guarded by a check against the current schema.
     """
-    columns = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
-    if "role" not in columns:
+    user_columns = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
+    if "role" not in user_columns:
         conn.execute("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'")
         # The first user created by init_db.py is the original admin login;
         # promote it so an upgraded database still has at least one admin.
         conn.execute("UPDATE users SET role = 'admin' WHERE username = 'admin'")
+
+    task_columns = {row["name"] for row in conn.execute("PRAGMA table_info(tasks)")}
+    if "project_id" not in task_columns:
+        conn.execute("ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects (id) ON DELETE SET NULL")
+    if "time_spent_hours" not in task_columns:
+        conn.execute("ALTER TABLE tasks ADD COLUMN time_spent_hours REAL")
+
+    meeting_columns = {row["name"] for row in conn.execute("PRAGMA table_info(meetings)")}
+    if "project_id" not in meeting_columns:
+        conn.execute("ALTER TABLE meetings ADD COLUMN project_id INTEGER REFERENCES projects (id) ON DELETE SET NULL")
+
     conn.commit()
 
 
@@ -98,9 +134,11 @@ def init_db(app):
     conn = sqlite3.connect(db_path)
     conn.row_factory = sqlite3.Row
     try:
-        conn.executescript(SCHEMA)
+        conn.executescript(TABLES_SCHEMA)
         conn.commit()
         _migrate(conn)
+        conn.executescript(INDEXES_SCHEMA)
+        conn.commit()
     finally:
         conn.close()
 

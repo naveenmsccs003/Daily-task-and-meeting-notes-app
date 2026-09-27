@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Projects - Task &amp; Meeting Tracker{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Projects</h1>
+    <a href="{{ url_for('projects.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Project</a>
+</div>
+
+<div class="card panel">
+    {% if projects %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Project</th><th>Description</th><th>Tasks</th><th>Meetings</th><th>Status</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for p in projects %}
+                <tr>
+                    <td><span class="project-dot" style="background:{{ p.color }}"></span> {{ p.name }}</td>
+                    <td>{{ (p.description or '-')|truncate(60) }}</td>
+                    <td>{{ counts[p.id].tasks }}</td>
+                    <td>{{ counts[p.id].meetings }}</td>
+                    <td><span class="badge bg-{{ 'success' if p.is_active else 'secondary' }}">{{ 'Active' if p.is_active else 'Archived' }}</span></td>
+                    <td class="task-actions">
+                        <a href="{{ url_for('projects.edit', project_id=p.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <form method="post" action="{{ url_for('projects.toggle_active', project_id=p.id) }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-{{ 'secondary' if p.is_active else 'success' }}" title="{{ 'Archive' if p.is_active else 'Reactivate' }}">
+                                <i class="bi bi-{{ 'archive' if p.is_active else 'arrow-counterclockwise' }}"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty-state">No projects yet. Create one to start tagging tasks and meetings.</p>
+    {% endif %}
+</div>
+{% endblock %}

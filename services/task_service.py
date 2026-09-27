@@ -51,6 +51,11 @@ def _apply_filters(where, params, filters):
         where.append("tasks.task_date <= ?")
         params.append(format_date_for_db(to_date))
 
+    project_id = filters.get("project_id")
+    if project_id:
+        where.append("tasks.project_id = ?")
+        params.append(project_id)
+
 
 ALL_USERS = "ALL"
 
@@ -78,8 +83,11 @@ def list_tasks(owner_id, filters=None, page=1, per_page=25, sort="date", sort_di
 
     offset = max(page - 1, 0) * per_page
     rows = db.execute(
-        f"""SELECT tasks.*, users.username AS owner_username, users.full_name AS owner_full_name
-            FROM tasks JOIN users ON users.id = tasks.user_id
+        f"""SELECT tasks.*, users.username AS owner_username, users.full_name AS owner_full_name,
+                   projects.name AS project_name, projects.color AS project_color
+            FROM tasks
+            JOIN users ON users.id = tasks.user_id
+            LEFT JOIN projects ON projects.id = tasks.project_id
             WHERE {where_sql}
             ORDER BY {sort_col} {sort_dir}, tasks.task_time {sort_dir}, tasks.id DESC
             LIMIT ? OFFSET ?""",
@@ -94,7 +102,10 @@ def get_task(user_id, task_id):
     authorization checks — never returns another user's task.
     """
     return get_db().execute(
-        "SELECT * FROM tasks WHERE id = ? AND user_id = ?", (task_id, user_id)
+        """SELECT tasks.*, projects.name AS project_name, projects.color AS project_color
+           FROM tasks LEFT JOIN projects ON projects.id = tasks.project_id
+           WHERE tasks.id = ? AND tasks.user_id = ?""",
+        (task_id, user_id),
     ).fetchone()
 
 
@@ -103,11 +114,29 @@ def get_task_any(task_id):
     owner's name joined in for display. Read-only callers only.
     """
     return get_db().execute(
-        """SELECT tasks.*, users.username AS owner_username, users.full_name AS owner_full_name
-           FROM tasks JOIN users ON users.id = tasks.user_id
+        """SELECT tasks.*, users.username AS owner_username, users.full_name AS owner_full_name,
+                  projects.name AS project_name, projects.color AS project_color
+           FROM tasks
+           JOIN users ON users.id = tasks.user_id
+           LEFT JOIN projects ON projects.id = tasks.project_id
            WHERE tasks.id = ?""",
         (task_id,),
     ).fetchone()
+
+
+def _parse_project_id(data):
+    raw = (data.get("project_id") or "").strip()
+    return int(raw) if raw.isdigit() else None
+
+
+def _parse_time_spent(data):
+    raw = (data.get("time_spent_hours") or "").strip()
+    if not raw:
+        return None
+    try:
+        return float(raw)
+    except ValueError:
+        return None
 
 
 def create_task(user_id, data):
@@ -119,11 +148,12 @@ def create_task(user_id, data):
 
     cur = db.execute(
         """INSERT INTO tasks
-           (user_id, task_date, task_time, title, description, priority,
-            status, due_date, notes, completed_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           (user_id, project_id, task_date, task_time, title, description, priority,
+            status, due_date, notes, time_spent_hours, completed_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             user_id,
+            _parse_project_id(data),
             data["task_date"],
             data.get("task_time") or None,
             data["title"].strip(),
@@ -132,6 +162,7 @@ def create_task(user_id, data):
             status,
             data.get("due_date") or None,
             data.get("notes") or None,
+            _parse_time_spent(data),
             completed_at,
         ),
     )
@@ -153,11 +184,12 @@ def update_task(user_id, task_id, data):
         completed_at = None
 
     db.execute(
-        """UPDATE tasks SET task_date=?, task_time=?, title=?, description=?,
-           priority=?, status=?, due_date=?, notes=?, completed_at=?,
+        """UPDATE tasks SET project_id=?, task_date=?, task_time=?, title=?, description=?,
+           priority=?, status=?, due_date=?, notes=?, time_spent_hours=?, completed_at=?,
            updated_at=datetime('now')
            WHERE id=? AND user_id=?""",
         (
+            _parse_project_id(data),
             data["task_date"],
             data.get("task_time") or None,
             data["title"].strip(),
@@ -166,6 +198,7 @@ def update_task(user_id, task_id, data):
             new_status,
             data.get("due_date") or None,
             data.get("notes") or None,
+            _parse_time_spent(data),
             completed_at,
             task_id,
             user_id,
@@ -203,7 +236,7 @@ def delete_task(user_id, task_id):
     return cur.rowcount > 0
 
 
-def status_counts(owner_id, from_date=None, to_date=None):
+def status_counts(owner_id, from_date=None, to_date=None, project_id=None):
     db = get_db()
     where = []
     params = []
@@ -216,6 +249,9 @@ def status_counts(owner_id, from_date=None, to_date=None):
     if to_date:
         where.append("task_date <= ?")
         params.append(format_date_for_db(to_date))
+    if project_id:
+        where.append("project_id = ?")
+        params.append(project_id)
     where_sql = " AND ".join(where) if where else "1=1"
 
     rows = db.execute(
@@ -248,7 +284,7 @@ def tasks_for_date(user_id, date_value):
     ).fetchall()
 
 
-def tasks_in_range(owner_id, from_date, to_date):
+def tasks_in_range(owner_id, from_date, to_date, project_id=None):
     """All tasks (no pagination) for report/export generation. owner_id may
     be the ALL_USERS sentinel for an admin's cross-user report.
     """
@@ -264,10 +300,16 @@ def tasks_in_range(owner_id, from_date, to_date):
     if to_date:
         where.append("tasks.task_date <= ?")
         params.append(format_date_for_db(to_date))
+    if project_id:
+        where.append("tasks.project_id = ?")
+        params.append(project_id)
     where_sql = " AND ".join(where) if where else "1=1"
     return db.execute(
-        f"""SELECT tasks.*, users.username AS owner_username, users.full_name AS owner_full_name
-            FROM tasks JOIN users ON users.id = tasks.user_id
+        f"""SELECT tasks.*, users.username AS owner_username, users.full_name AS owner_full_name,
+                   projects.name AS project_name, projects.color AS project_color
+            FROM tasks
+            JOIN users ON users.id = tasks.user_id
+            LEFT JOIN projects ON projects.id = tasks.project_id
             WHERE {where_sql} ORDER BY tasks.task_date DESC, tasks.task_time DESC""",
         params,
     ).fetchall()

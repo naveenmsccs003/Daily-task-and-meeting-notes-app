@@ -2,7 +2,7 @@ from flask import Blueprint, Response, flash, redirect, render_template, request
 from flask_login import current_user, login_required
 
 from models import User
-from services import export_service, report_service
+from services import export_service, project_service, report_service
 from services.task_service import ALL_USERS
 from utils.date_utils import format_date_for_db, get_period_dates
 from utils.helpers import safe_export_filename
@@ -42,7 +42,8 @@ def index():
         period, from_date, to_date = "month", *get_period_dates("month")
 
     owner_id, owner_scope, owner_label = _resolve_owner_scope()
-    report = report_service.build_report(owner_id, from_date, to_date)
+    project_id = request.args.get("project_id", "", type=int) or None
+    report = report_service.build_report(owner_id, from_date, to_date, project_id=project_id)
 
     return render_template(
         "reports/index.html",
@@ -53,13 +54,16 @@ def index():
         owner_scope=owner_scope,
         owner_label=owner_label,
         all_users=User.get_all() if current_user.is_admin else None,
+        all_projects=project_service.list_projects(include_archived=False),
+        project_id=project_id,
     )
 
 
 def _report_for_export():
     period, from_date, to_date = _resolve_range()
     owner_id, _owner_scope, _owner_label = _resolve_owner_scope()
-    return report_service.build_report(owner_id, from_date, to_date)
+    project_id = request.args.get("project_id", "", type=int) or None
+    return report_service.build_report(owner_id, from_date, to_date, project_id=project_id)
 
 
 @reports_bp.route("/export/excel")
