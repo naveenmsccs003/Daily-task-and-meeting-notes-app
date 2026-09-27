@@ -102,9 +102,50 @@
     </div>
 </div>
 
-<script id="statusChartData" type="application/json">
-{{ data.status_counts|tojson }}
-</script>
+<h2 class="section-title">Analytics <span class="text-muted small fw-normal">— for the period selected above</span></h2>
+<div class="dashboard-grid">
+    <div class="card panel">
+        <div class="panel-header">Priority Distribution</div>
+        {% if data.total_tasks %}
+        <canvas id="priorityChart" height="220"></canvas>
+        {% else %}
+        <p class="empty-state">No tasks in this period.</p>
+        {% endif %}
+    </div>
+
+    <div class="card panel">
+        <div class="panel-header">Tasks by Project</div>
+        {% if data.project_breakdown %}
+        <canvas id="projectChart" height="220"></canvas>
+        {% else %}
+        <p class="empty-state">No tasks in this period.</p>
+        {% endif %}
+    </div>
+
+    <div class="card panel">
+        <div class="panel-header">Completion Trend</div>
+        {% if data.completion_trend and data.status_counts.COMPLETED %}
+        <canvas id="trendChart" height="220"></canvas>
+        {% else %}
+        <p class="empty-state">No completed tasks in this period yet.</p>
+        {% endif %}
+    </div>
+
+    <div class="card panel">
+        <div class="panel-header">Hours: Estimated vs Spent</div>
+        {% if data.hours_totals.estimated or data.hours_totals.spent %}
+        <canvas id="hoursChart" height="220"></canvas>
+        {% else %}
+        <p class="empty-state">No hours logged or estimated in this period.</p>
+        {% endif %}
+    </div>
+</div>
+
+<script id="statusChartData" type="application/json">{{ data.status_counts|tojson }}</script>
+<script id="priorityChartData" type="application/json">{{ data.priority_counts|tojson }}</script>
+<script id="projectChartData" type="application/json">{{ data.project_breakdown|tojson }}</script>
+<script id="trendChartData" type="application/json">{{ data.completion_trend|tojson }}</script>
+<script id="hoursChartData" type="application/json">{{ data.hours_totals|tojson }}</script>
 {% endblock %}
 
 {% block extra_js %}

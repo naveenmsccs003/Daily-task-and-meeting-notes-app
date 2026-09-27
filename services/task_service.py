@@ -1,6 +1,8 @@
 """Data-access + business logic for tasks. Routes call into this module only;
 no SQL lives in routes or templates.
 """
+from datetime import timedelta
+
 from database import get_db
 from utils.date_utils import format_date_for_db, today
 
@@ -295,6 +297,136 @@ def status_counts(owner_id, from_date=None, to_date=None, project_id=None):
     for row in rows:
         counts[row["status"]] = row["cnt"]
     return counts
+
+
+def priority_counts(owner_id, from_date=None, to_date=None):
+    """Same shape as status_counts, grouped by priority instead — feeds the
+    Dashboard's Priority Distribution chart.
+    """
+    db = get_db()
+    where = []
+    params = []
+    if owner_id != ALL_USERS:
+        where.append("user_id = ?")
+        params.append(owner_id)
+    if from_date:
+        where.append("task_date >= ?")
+        params.append(format_date_for_db(from_date))
+    if to_date:
+        where.append("task_date <= ?")
+        params.append(format_date_for_db(to_date))
+    where_sql = " AND ".join(where) if where else "1=1"
+
+    rows = db.execute(
+        f"SELECT priority, COUNT(*) as cnt FROM tasks WHERE {where_sql} GROUP BY priority",
+        params,
+    ).fetchall()
+    counts = {"LOW": 0, "MEDIUM": 0, "HIGH": 0, "URGENT": 0}
+    for row in rows:
+        counts[row["priority"]] = row["cnt"]
+    return counts
+
+
+def project_breakdown(owner_id, from_date=None, to_date=None, limit=6):
+    """Task count per project (untagged tasks grouped under "No Project"),
+    largest first — feeds the Dashboard's Tasks by Project chart.
+    """
+    db = get_db()
+    where = []
+    params = []
+    if owner_id != ALL_USERS:
+        where.append("tasks.user_id = ?")
+        params.append(owner_id)
+    if from_date:
+        where.append("tasks.task_date >= ?")
+        params.append(format_date_for_db(from_date))
+    if to_date:
+        where.append("tasks.task_date <= ?")
+        params.append(format_date_for_db(to_date))
+    where_sql = " AND ".join(where) if where else "1=1"
+
+    rows = db.execute(
+        f"""SELECT COALESCE(projects.name, 'No Project') AS name,
+                   COALESCE(projects.color, '#9ca3af') AS color,
+                   COUNT(*) AS cnt
+            FROM tasks LEFT JOIN projects ON projects.id = tasks.project_id
+            WHERE {where_sql}
+            GROUP BY tasks.project_id
+            ORDER BY cnt DESC""",
+        params,
+    ).fetchall()
+    return [{"name": r["name"], "color": r["color"], "count": r["cnt"]} for r in rows[:limit]]
+
+
+def completion_trend(owner_id, from_date, to_date):
+    """Completed-task counts over the period, bucketed by day (or by week
+    once the range exceeds ~45 days, to keep the chart readable). Daily
+    buckets are zero-filled so the line doesn't skip gaps with no
+    completions — feeds the Dashboard's Completion Trend chart.
+    """
+    if not from_date or not to_date:
+        return []
+
+    db = get_db()
+    where = ["status = 'COMPLETED'", "completed_at IS NOT NULL",
+             "date(completed_at) >= ?", "date(completed_at) <= ?"]
+    params = [format_date_for_db(from_date), format_date_for_db(to_date)]
+    if owner_id != ALL_USERS:
+        where.append("user_id = ?")
+        params.append(owner_id)
+    where_sql = " AND ".join(where)
+
+    span_days = (to_date - from_date).days + 1
+
+    if span_days > 45:
+        rows = db.execute(
+            f"""SELECT strftime('%Y-W%W', completed_at) AS bucket, COUNT(*) AS cnt
+                FROM tasks WHERE {where_sql} GROUP BY bucket ORDER BY bucket""",
+            params,
+        ).fetchall()
+        return [{"label": r["bucket"], "count": r["cnt"]} for r in rows]
+
+    rows = db.execute(
+        f"""SELECT date(completed_at) AS bucket, COUNT(*) AS cnt
+            FROM tasks WHERE {where_sql} GROUP BY bucket ORDER BY bucket""",
+        params,
+    ).fetchall()
+    counts_by_day = {r["bucket"]: r["cnt"] for r in rows}
+
+    trend = []
+    d = from_date
+    while d <= to_date:
+        key = d.strftime("%Y-%m-%d")
+        trend.append({"label": d.strftime("%d %b"), "count": counts_by_day.get(key, 0)})
+        d += timedelta(days=1)
+    return trend
+
+
+def hours_totals(owner_id, from_date=None, to_date=None):
+    """Sum of estimated vs actual hours across matching tasks — feeds the
+    Dashboard's Hours: Estimated vs Spent chart.
+    """
+    db = get_db()
+    where = []
+    params = []
+    if owner_id != ALL_USERS:
+        where.append("user_id = ?")
+        params.append(owner_id)
+    if from_date:
+        where.append("task_date >= ?")
+        params.append(format_date_for_db(from_date))
+    if to_date:
+        where.append("task_date <= ?")
+        params.append(format_date_for_db(to_date))
+    where_sql = " AND ".join(where) if where else "1=1"
+
+    row = db.execute(
+        f"""SELECT COALESCE(SUM(estimated_hours), 0) AS est,
+                   COALESCE(SUM(time_spent_hours), 0) AS spent
+            FROM tasks WHERE {where_sql}""",
+        params,
+    ).fetchone()
+    return {"estimated": row["est"], "spent": row["spent"]}
 
 
 def overdue_count(user_id):
