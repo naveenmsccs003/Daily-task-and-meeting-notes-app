@@ -162,6 +162,15 @@ current owner. The `assigned_user_id` field is validated server-side
 against the real user list on every request, so a non-admin cannot assign
 a task to someone else by tampering with the form.
 
+### Estimated time and inline time tracking
+
+Tasks have two separate hours fields: **Estimated Time** (set once, on the
+create/edit form — a plan) and **Time Spent** (the actual hours logged).
+Time Spent can also be updated directly from the Tasks list table via an
+inline input next to the status dropdown — no need to open the edit form
+for a quick update. Reports show both an "Hours Estimated" and an "Hours
+Logged" total, and every export includes both columns.
+
 ## Running Tests
 
 ```bash

@@ -51,6 +51,7 @@
     <div class="summary-card summary-danger"><div class="summary-value">{{ report.summary.overdue }}</div><div class="summary-label">Overdue</div></div>
     <div class="summary-card summary-purple"><div class="summary-value">{{ report.summary.total_meetings }}</div><div class="summary-label">Meetings</div></div>
     <div class="summary-card summary-info"><div class="summary-value">{{ report.summary.total_time_spent }}</div><div class="summary-label">Hours Logged</div></div>
+    <div class="summary-card summary-warning"><div class="summary-value">{{ report.summary.total_estimated }}</div><div class="summary-label">Hours Estimated</div></div>
 </div>
 
 <div class="card panel">
@@ -64,7 +65,7 @@
     {% if report.tasks %}
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
-            <thead><tr><th>Date</th><th>Time</th><th>Title</th><th>Project</th>{% if report.show_owner %}<th>Owner</th>{% endif %}<th>Priority</th><th>Status</th><th>Due Date</th><th>Hours</th><th>Notes</th></tr></thead>
+            <thead><tr><th>Date</th><th>Time</th><th>Title</th><th>Project</th>{% if report.show_owner %}<th>Owner</th>{% endif %}<th>Priority</th><th>Status</th><th>Due Date</th><th>Est.</th><th>Spent</th><th>Notes</th></tr></thead>
             <tbody>
             {% for t in report.tasks %}
                 <tr>
@@ -73,6 +74,7 @@
                     {% if report.show_owner %}<td>{{ t.owner_full_name or t.owner_username }}</td>{% endif %}
                     <td>{{ priority_badge(t.priority) }}</td><td>{{ status_badge(t.status) }}</td>
                     <td>{{ t.due_date|display_date if t.due_date else '-' }}</td>
+                    <td>{{ t.estimated_hours if t.estimated_hours is not none else '-' }}</td>
                     <td>{{ t.time_spent_hours if t.time_spent_hours is not none else '-' }}</td>
                     <td>{{ (t.notes or '-')|truncate(60) }}</td>
                 </tr>

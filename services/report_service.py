@@ -21,6 +21,7 @@ def build_report(owner_id, from_date, to_date, project_id=None):
         and row["status"] not in ("COMPLETED", "CANCELLED")
     )
     total_time_spent = sum(row["time_spent_hours"] or 0 for row in tasks)
+    total_estimated = sum(row["estimated_hours"] or 0 for row in tasks)
 
     summary = {
         "total_tasks": len(tasks),
@@ -32,6 +33,7 @@ def build_report(owner_id, from_date, to_date, project_id=None):
         "overdue": overdue,
         "total_meetings": len(meetings),
         "total_time_spent": total_time_spent,
+        "total_estimated": total_estimated,
     }
 
     range_label = (

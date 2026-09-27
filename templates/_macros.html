@@ -31,3 +31,9 @@
   {% endfor %}
 </select>
 {%- endmacro %}
+
+{% macro time_spent_input(task_id, current_hours) -%}
+<input type="number" step="0.25" min="0" max="999" class="form-control form-control-sm time-spent-input"
+       data-task-id="{{ task_id }}" value="{{ current_hours if current_hours is not none else '' }}"
+       placeholder="-" aria-label="Update time spent (hours)">
+{%- endmacro %}

@@ -24,7 +24,7 @@ from reportlab.platypus import (
 
 from utils.date_utils import format_date_for_display
 
-TASK_HEADERS = ["Date", "Time", "Title", "Project", "Priority", "Status", "Due Date", "Hours", "Notes"]
+TASK_HEADERS = ["Date", "Time", "Title", "Project", "Priority", "Status", "Due Date", "Estimated", "Spent", "Notes"]
 MEETING_HEADERS = ["Date", "Time", "Title", "Project", "My Points", "Meeting Points", "Decisions", "Notes"]
 
 
@@ -63,6 +63,7 @@ def _task_row(t, show_owner=False):
         t["priority"],
         t["status"].replace("_", " ").title(),
         format_date_for_display(t["due_date"]) if t["due_date"] else "",
+        t["estimated_hours"] if t["estimated_hours"] is not None else "",
         t["time_spent_hours"] if t["time_spent_hours"] is not None else "",
         t["notes"] or "",
     ]
@@ -112,6 +113,7 @@ def generate_excel(report_data):
         ("Cancelled", report_data["summary"]["cancelled"]),
         ("Overdue", report_data["summary"]["overdue"]),
         ("Total Meetings", report_data["summary"]["total_meetings"]),
+        ("Total Hours Estimated", report_data["summary"]["total_estimated"]),
         ("Total Hours Logged", report_data["summary"]["total_time_spent"]),
     ]
     start_row = 5
@@ -212,7 +214,7 @@ def generate_pdf(report_data):
 
     summary = report_data["summary"]
     summary_table_data = [
-        ["Total Tasks", "Completed", "In Progress", "TODO", "On Hold", "Cancelled", "Overdue", "Meetings", "Hours Logged"],
+        ["Total Tasks", "Completed", "In Progress", "TODO", "On Hold", "Cancelled", "Overdue", "Meetings", "Est. Hrs", "Hrs Logged"],
         [
             summary["total_tasks"],
             summary["completed"],
@@ -222,6 +224,7 @@ def generate_pdf(report_data):
             summary["cancelled"],
             summary["overdue"],
             summary["total_meetings"],
+            summary["total_estimated"],
             summary["total_time_spent"],
         ],
     ]
@@ -248,7 +251,7 @@ def generate_pdf(report_data):
         data = [_task_headers(show_owner)] + [
             [escape(str(v)) for v in _task_row(t, show_owner)] for t in report_data["tasks"]
         ]
-        task_col_widths = [0.7 * inch, 0.5 * inch, 1.4 * inch, 1.0 * inch, 0.7 * inch, 0.9 * inch, 0.7 * inch, 0.5 * inch, 2.1 * inch]
+        task_col_widths = [0.7 * inch, 0.5 * inch, 1.3 * inch, 0.9 * inch, 0.7 * inch, 0.9 * inch, 0.7 * inch, 0.5 * inch, 0.5 * inch, 1.9 * inch]
         if show_owner:
             task_col_widths.insert(4, 1.0 * inch)
         table = Table(data, repeatRows=1, colWidths=task_col_widths)

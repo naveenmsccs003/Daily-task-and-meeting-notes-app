@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_macros.html" import status_badge, priority_badge, status_select, sort_th %}
+{% from "_macros.html" import status_badge, priority_badge, status_select, sort_th, time_spent_input %}
 {% block title %}Tasks - Task &amp; Meeting Tracker{% endblock %}
 {% block content %}
 <div class="page-header">
@@ -71,6 +71,7 @@
                     {{ sort_th('priority', 'Priority', sort, sort_dir, 'tasks.list_view', qs) }}
                     {{ sort_th('status', 'Status', sort, sort_dir, 'tasks.list_view', qs) }}
                     {{ sort_th('due_date', 'Due Date', sort, sort_dir, 'tasks.list_view', qs) }}
+                    <th>Time Spent</th>
                     <th>Actions</th>
                 </tr>
             </thead>
@@ -91,6 +92,13 @@
                         {% endif %}
                     </td>
                     <td>{{ t.due_date|display_date if t.due_date else '-' }}</td>
+                    <td style="max-width: 90px;">
+                        {% if t.user_id == current_user.id %}
+                        {{ time_spent_input(t.id, t.time_spent_hours) }}
+                        {% else %}
+                        {{ (t.time_spent_hours ~ ' hrs') if t.time_spent_hours is not none else '-' }}
+                        {% endif %}
+                    </td>
                     <td class="task-actions">
                         <a href="{{ url_for('tasks.detail', task_id=t.id) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
                         {% if t.user_id == current_user.id %}

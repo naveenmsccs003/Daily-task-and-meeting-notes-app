@@ -57,4 +57,43 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         });
     });
+
+    document.querySelectorAll('.time-spent-input').forEach(function (input) {
+        let previousValue = input.value;
+        input.addEventListener('change', function () {
+            const taskId = input.dataset.taskId;
+            const newValue = input.value;
+            input.disabled = true;
+
+            fetch('/tasks/' + taskId + '/time-spent', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': getCsrfToken(),
+                },
+                body: JSON.stringify({ time_spent_hours: newValue }),
+            })
+                .then(function (response) {
+                    return response.json().then(function (data) {
+                        return { ok: response.ok, data: data };
+                    });
+                })
+                .then(function (result) {
+                    input.disabled = false;
+                    if (result.ok && result.data.success) {
+                        showQuickToast(result.data.message, false);
+                        previousValue = newValue;
+                    } else {
+                        input.value = previousValue;
+                        showQuickToast(result.data.message || 'Unable to update task.', true);
+                    }
+                })
+                .catch(function () {
+                    input.disabled = false;
+                    input.value = previousValue;
+                    showQuickToast('Network error. Please try again.', true);
+                });
+        });
+    });
 });

@@ -17,6 +17,24 @@ def _err(errors, field, message):
     errors[field] = message
 
 
+def parse_hours(raw, label="Value"):
+    """Parse an hours-type field. Returns (value_or_None, error_or_None).
+    An empty string is valid and means "not set" (value=None, no error).
+    `label` (e.g. "Time spent", "Estimated time") is used to phrase the
+    error message for whichever field is calling this.
+    """
+    raw = (raw or "").strip()
+    if not raw:
+        return None, None
+    try:
+        value = float(raw)
+    except ValueError:
+        return None, f"{label} must be a number (e.g. 1.5)."
+    if value < 0 or value > MAX_TIME_SPENT_HOURS:
+        return None, f"{label} must be between 0 and {MAX_TIME_SPENT_HOURS}."
+    return value, None
+
+
 def validate_task(data):
     """data: dict-like with keys task_date, task_time, title, description,
     priority, status, due_date, notes.
@@ -60,14 +78,13 @@ def validate_task(data):
     if len(notes) > LONG_TEXT_MAX:
         _err(errors, "notes", "Notes are too long.")
 
-    time_spent = (data.get("time_spent_hours") or "").strip()
-    if time_spent:
-        try:
-            value = float(time_spent)
-            if value < 0 or value > MAX_TIME_SPENT_HOURS:
-                _err(errors, "time_spent_hours", f"Enter a value between 0 and {MAX_TIME_SPENT_HOURS}.")
-        except ValueError:
-            _err(errors, "time_spent_hours", "Time spent must be a number (e.g. 1.5).")
+    _, time_spent_error = parse_hours(data.get("time_spent_hours"), "Time spent")
+    if time_spent_error:
+        _err(errors, "time_spent_hours", time_spent_error)
+
+    _, estimated_error = parse_hours(data.get("estimated_hours"), "Estimated time")
+    if estimated_error:
+        _err(errors, "estimated_hours", estimated_error)
 
     project_id = (data.get("project_id") or "").strip()
     if project_id and not project_id.isdigit():

@@ -29,6 +29,7 @@
         <dt>Priority</dt><dd>{{ priority_badge(task.priority) }}</dd>
         <dt>Status</dt><dd>{{ status_badge(task.status) }}</dd>
         <dt>Due Date</dt><dd>{{ task.due_date|display_date if task.due_date else '-' }}</dd>
+        <dt>Estimated Time</dt><dd>{{ (task.estimated_hours ~ ' hrs') if task.estimated_hours is not none else '-' }}</dd>
         <dt>Time Spent</dt><dd>{{ (task.time_spent_hours ~ ' hrs') if task.time_spent_hours is not none else '-' }}</dd>
         <dt>Description</dt><dd>{{ task.description or '-' }}</dd>
         <dt>Notes</dt><dd>{{ task.notes or '-' }}</dd>

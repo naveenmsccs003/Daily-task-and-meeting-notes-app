@@ -7,7 +7,7 @@ from services.task_service import ALL_USERS
 from utils.date_utils import get_period_dates
 from utils.decorators import handle_errors
 from utils.helpers import json_error, json_success, wants_json
-from utils.validators import validate_status_value, validate_task
+from utils.validators import parse_hours, validate_status_value, validate_task
 
 tasks_bp = Blueprint("tasks", __name__, url_prefix="/tasks")
 
@@ -226,6 +226,32 @@ def update_status(task_id):
 
     if wants_json():
         return json_success(message, status=status.upper()) if updated else json_error(message, status=404)
+
+    flash(message, "success" if updated else "danger")
+    return redirect(request.referrer or url_for("tasks.list_view"))
+
+
+@tasks_bp.route("/<int:task_id>/time-spent", methods=["POST"])
+@login_required
+@handle_errors("Unable to update time spent.")
+def update_time_spent(task_id):
+    if request.is_json:
+        raw = (request.get_json(silent=True) or {}).get("time_spent_hours")
+    else:
+        raw = request.form.get("time_spent_hours")
+
+    hours, error = parse_hours(raw, "Time spent")
+    if error:
+        if wants_json():
+            return json_error(error)
+        flash(error, "danger")
+        return redirect(url_for("tasks.list_view"))
+
+    updated = task_service.update_time_spent(current_user.id, task_id, hours)
+    message = "Time spent updated." if updated else "Unable to update task."
+
+    if wants_json():
+        return json_success(message, time_spent_hours=hours) if updated else json_error(message, status=404)
 
     flash(message, "success" if updated else "danger")
     return redirect(request.referrer or url_for("tasks.list_view"))

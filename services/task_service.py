@@ -129,14 +129,22 @@ def _parse_project_id(data):
     return int(raw) if raw.isdigit() else None
 
 
-def _parse_time_spent(data):
-    raw = (data.get("time_spent_hours") or "").strip()
+def _parse_hours(raw):
+    raw = (raw or "").strip()
     if not raw:
         return None
     try:
         return float(raw)
     except ValueError:
         return None
+
+
+def _parse_time_spent(data):
+    return _parse_hours(data.get("time_spent_hours"))
+
+
+def _parse_estimated_hours(data):
+    return _parse_hours(data.get("estimated_hours"))
 
 
 def create_task(user_id, data):
@@ -149,8 +157,8 @@ def create_task(user_id, data):
     cur = db.execute(
         """INSERT INTO tasks
            (user_id, project_id, task_date, task_time, title, description, priority,
-            status, due_date, notes, time_spent_hours, completed_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            status, due_date, notes, estimated_hours, time_spent_hours, completed_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             user_id,
             _parse_project_id(data),
@@ -162,6 +170,7 @@ def create_task(user_id, data):
             status,
             data.get("due_date") or None,
             data.get("notes") or None,
+            _parse_estimated_hours(data),
             _parse_time_spent(data),
             completed_at,
         ),
@@ -190,7 +199,7 @@ def update_task(user_id, task_id, data, new_owner_id=None):
 
     db.execute(
         """UPDATE tasks SET user_id=?, project_id=?, task_date=?, task_time=?, title=?, description=?,
-           priority=?, status=?, due_date=?, notes=?, time_spent_hours=?, completed_at=?,
+           priority=?, status=?, due_date=?, notes=?, estimated_hours=?, time_spent_hours=?, completed_at=?,
            updated_at=datetime('now')
            WHERE id=? AND user_id=?""",
         (
@@ -204,11 +213,25 @@ def update_task(user_id, task_id, data, new_owner_id=None):
             new_status,
             data.get("due_date") or None,
             data.get("notes") or None,
+            _parse_estimated_hours(data),
             _parse_time_spent(data),
             completed_at,
             task_id,
             user_id,
         ),
+    )
+    db.commit()
+    return True
+
+
+def update_time_spent(user_id, task_id, hours):
+    """Quick inline update from the Tasks list table (mirrors update_status)."""
+    db = get_db()
+    if not get_task(user_id, task_id):
+        return False
+    db.execute(
+        "UPDATE tasks SET time_spent_hours=?, updated_at=datetime('now') WHERE id=? AND user_id=?",
+        (hours, task_id, user_id),
     )
     db.commit()
     return True

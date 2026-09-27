@@ -58,6 +58,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     status TEXT NOT NULL DEFAULT 'TODO',
     due_date TEXT,
     notes TEXT,
+    estimated_hours REAL,
     time_spent_hours REAL,
     completed_at TEXT,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -119,6 +120,8 @@ def _migrate(conn):
         conn.execute("ALTER TABLE tasks ADD COLUMN project_id INTEGER REFERENCES projects (id) ON DELETE SET NULL")
     if "time_spent_hours" not in task_columns:
         conn.execute("ALTER TABLE tasks ADD COLUMN time_spent_hours REAL")
+    if "estimated_hours" not in task_columns:
+        conn.execute("ALTER TABLE tasks ADD COLUMN estimated_hours REAL")
 
     meeting_columns = {row["name"] for row in conn.execute("PRAGMA table_info(meetings)")}
     if "project_id" not in meeting_columns:
