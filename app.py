@@ -34,6 +34,7 @@ def create_app(config_class=Config):
 
     from routes.auth import auth_bp
     from routes.dashboard import dashboard_bp
+    from routes.email import email_bp
     from routes.meetings import meetings_bp
     from routes.projects import projects_bp
     from routes.reports import reports_bp
@@ -47,6 +48,7 @@ def create_app(config_class=Config):
     app.register_blueprint(projects_bp)
     app.register_blueprint(reports_bp)
     app.register_blueprint(users_bp)
+    app.register_blueprint(email_bp)
 
     register_error_handlers(app)
     configure_logging(app)
@@ -59,6 +61,14 @@ def create_app(config_class=Config):
         """Create database tables/indexes (safe to re-run)."""
         database.init_db(app)
         print("Database initialized.")
+
+    @app.cli.command("send-scheduled-emails")
+    def send_scheduled_emails_command():
+        """Send any automatic report emails that are due (for cron)."""
+        from services import email_service
+
+        sent = email_service.run_due_schedules()
+        print(f"Sent {sent} scheduled email(s).")
 
     return app
 
@@ -93,4 +103,13 @@ def register_error_handlers(app):
 app = create_app()
 
 if __name__ == "__main__":
+    # With debug on, Flask's reloader runs this file twice (a watcher parent
+    # and the real server child); only the child sets WERKZEUG_RUN_MAIN, so
+    # the scheduler starts exactly once.
+    if app.config["EMAIL_SCHEDULER_ENABLED"] and (
+        not app.config["DEBUG"] or os.environ.get("WERKZEUG_RUN_MAIN") == "true"
+    ):
+        from services.email_service import start_scheduler
+
+        start_scheduler(app)
     app.run(debug=app.config["DEBUG"])

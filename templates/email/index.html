@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% block title %}Email Reports - Task &amp; Meeting Tracker{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Email Reports</h1>
+</div>
+
+{% if configured %}
+<div class="alert alert-success py-2 small"><i class="bi bi-envelope-check"></i> Email is set up. Reports are sent from <b>{{ sender }}</b>.</div>
+{% else %}
+<div class="alert alert-warning small">
+    <i class="bi bi-exclamation-triangle"></i> <b>Email is not set up yet.</b>
+    Add <code>MAIL_SERVER</code>, <code>MAIL_USERNAME</code> and <code>MAIL_PASSWORD</code> to your <code>.env</code> file and restart the app
+    (see the README, section <i>Email Reports</i>). You can still save your settings below.
+</div>
+{% endif %}
+
+<div class="card panel form-panel">
+    <div class="panel-header">Send a report now</div>
+    <form method="post" action="{{ url_for('email.send') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label for="period" class="form-label">Period *</label>
+                <select class="form-select {{ 'is-invalid' if send_errors.period }}" id="period" name="period">
+                    {% for value, label, _title in periods %}
+                    <option value="{{ value }}" {{ 'selected' if send_form.get('period') == value }}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+                {% if send_errors.period %}<div class="invalid-feedback">{{ send_errors.period }}</div>{% endif %}
+            </div>
+            <div class="col-md-4 email-custom-range" {{ 'hidden' if send_form.get('period') != 'custom' }}>
+                <label for="start_date" class="form-label">From Date</label>
+                <input type="date" class="form-control" id="start_date" name="start_date" value="{{ send_form.get('start_date', '') }}">
+            </div>
+            <div class="col-md-4 email-custom-range" {{ 'hidden' if send_form.get('period') != 'custom' }}>
+                <label for="end_date" class="form-label">To Date</label>
+                <input type="date" class="form-control" id="end_date" name="end_date" value="{{ send_form.get('end_date', '') }}">
+            </div>
+            <div class="col-md-4">
+                <label for="project_id" class="form-label">Project</label>
+                <select class="form-select" id="project_id" name="project_id">
+                    <option value="">All Projects</option>
+                    {% for p in all_projects %}
+                    <option value="{{ p.id }}" {{ 'selected' if send_form.get('project_id')|string == p.id|string }}>{{ p.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-8">
+                <label for="recipients" class="form-label">Send to *</label>
+                <input type="text" class="form-control {{ 'is-invalid' if send_errors.recipients }}" id="recipients" name="recipients"
+                       value="{{ send_form.get('recipients', '') }}" placeholder="you@example.com, manager@example.com">
+                {% if send_errors.recipients %}<div class="invalid-feedback">{{ send_errors.recipients }}</div>{% else %}<div class="form-text">Separate several addresses with commas.</div>{% endif %}
+            </div>
+            <div class="col-12">
+                <label class="form-label d-block">Include *</label>
+                {% for key, label in [('status', 'Task Status (counts)'), ('tasks', 'Tasks (point by point)'), ('meetings', 'Meeting Points (point by point)')] %}
+                <div class="form-check form-check-inline">
+                    <input class="form-check-input" type="checkbox" id="send_{{ key }}" name="{{ key }}" {{ 'checked' if send_form.get(key) }}>
+                    <label class="form-check-label" for="send_{{ key }}">{{ label }}</label>
+                </div>
+                {% endfor %}
+                {% if send_errors.sections %}<div class="text-danger small">{{ send_errors.sections }}</div>{% endif %}
+            </div>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> Send Email</button>
+        </div>
+    </form>
+</div>
+
+<div class="card panel" id="schedules">
+    <div class="panel-header">Automatic emails</div>
+    <p class="text-muted small mb-2">
+        Turn on the reports you want. Each one is sent at {{ '%02d:00'|format(send_hour) }} on the last day of its period, while the app is running.
+        If the app was off at that time, the email is sent as soon as it starts again. <b>Send now</b> emails the current period straight away.
+    </p>
+    <form method="post" action="{{ url_for('email.save_schedules') }}" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="table-responsive">
+            <table class="table table-sm align-middle mb-0 responsive-table">
+                <thead><tr><th>On</th><th>Report</th><th>Send to</th><th>Include</th><th>Last sent</th><th></th></tr></thead>
+                <tbody>
+                {% for freq, label, description in frequencies %}
+                {% set s = schedules[freq] %}
+                <tr>
+                    <td data-label="On">
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" id="{{ freq }}_active" name="{{ freq }}_active" {{ 'checked' if s.is_active }} aria-label="Enable {{ label }} email">
+                        </div>
+                    </td>
+                    <td class="mobile-card-title"><label for="{{ freq }}_active" class="mb-0"><b>{{ label }}</b></label><div class="text-muted small">{{ description }}</div></td>
+                    <td data-label="Send to">
+                        <input type="text" class="form-control form-control-sm {{ 'is-invalid' if schedule_errors[freq] }}" name="{{ freq }}_recipients" value="{{ s.recipients }}" placeholder="you@example.com" aria-label="{{ label }} recipients">
+                        {% if schedule_errors[freq] %}<div class="invalid-feedback">{{ schedule_errors[freq] }}</div>{% endif %}
+                    </td>
+                    <td data-label="Include" class="text-nowrap">
+                        {% for key, short in [('status', 'Status'), ('tasks', 'Tasks'), ('meetings', 'Meetings')] %}
+                        <div class="form-check form-check-inline small me-2">
+                            <input class="form-check-input" type="checkbox" id="{{ freq }}_{{ key }}" name="{{ freq }}_{{ key }}" {{ 'checked' if s['include_' ~ key] }}>
+                            <label class="form-check-label" for="{{ freq }}_{{ key }}">{{ short }}</label>
+                        </div>
+                        {% endfor %}
+                    </td>
+                    <td data-label="Last sent" class="small">{{ s.last_sent_at or '-' }}</td>
+                    <td data-label="">
+                        <button type="submit" class="btn btn-sm btn-outline-primary text-nowrap" formaction="{{ url_for('email.send_schedule_now', freq=freq) }}"><i class="bi bi-send"></i> Send now</button>
+                    </td>
+                </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Automatic Emails</button>
+        </div>
+    </form>
+</div>
+
+<div class="card panel">
+    <div class="panel-header">Email log (last 20)</div>
+    {% if log %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0 responsive-table">
+            <thead><tr><th>Sent at</th><th>Type</th><th>Subject</th><th>To</th><th>Result</th></tr></thead>
+            <tbody>
+            {% for row in log %}
+            <tr>
+                <td data-label="Sent at">{{ row.sent_at }}</td>
+                <td data-label="Type">{{ row.kind|title }}</td>
+                <td class="mobile-card-title">{{ row.subject }}</td>
+                <td data-label="To">{{ row.recipients }}</td>
+                <td data-label="Result">
+                    {% if row.success %}<span class="badge bg-success">Sent</span>
+                    {% else %}<span class="badge bg-danger">Failed</span> <span class="small text-danger">{{ row.error }}</span>{% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty-state">No emails sent yet.</p>
+    {% endif %}
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var period = document.getElementById('period');
+    if (!period) return;
+    period.addEventListener('change', function () {
+        document.querySelectorAll('.email-custom-range').forEach(function (el) {
+            el.hidden = period.value !== 'custom';
+        });
+    });
+});
+</script>
+{% endblock %}

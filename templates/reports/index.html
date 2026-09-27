@@ -11,6 +11,7 @@
         <a href="{{ url_for('reports.export_excel', period=period, start_date=from_date, end_date=to_date, owner=owner_scope, project_id=project_id) }}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel"></i> Export Excel</a>
         <a href="{{ url_for('reports.export_csv', period=period, start_date=from_date, end_date=to_date, owner=owner_scope, project_id=project_id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-file-earmark-spreadsheet"></i> Export CSV</a>
         <a href="{{ url_for('reports.export_pdf', period=period, start_date=from_date, end_date=to_date, owner=owner_scope, project_id=project_id) }}" class="btn btn-outline-danger btn-sm"><i class="bi bi-file-earmark-pdf"></i> Export PDF</a>
+        <a href="{{ url_for('email.index', period=period, start_date=from_date, end_date=to_date, project_id=project_id) }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-envelope"></i> Email Report</a>
     </div>
 </div>
 

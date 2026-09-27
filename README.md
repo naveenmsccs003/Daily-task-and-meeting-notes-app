@@ -20,6 +20,7 @@ easy to maintain.
 - **Multi-user & roles** — admins can create/deactivate user accounts from a Users page and get read-only oversight of everyone's tasks/meetings/reports; regular users only ever see and edit their own data (see **Multi-user & Roles** below)
 - **Projects** — a shared, taggable project list; tag any task or meeting with a project, then filter/report by project everywhere (Tasks, Meetings, Reports, exports)
 - **Time tracking** — log hours spent per task; totaled in Reports and included in every export
+- **Email reports** — send a point-by-point email of tasks, meeting points, and task status for any period, or switch on automatic Daily / Weekly / Monthly / 6-Monthly / Yearly emails (see **Email Reports** below)
 - **Light/dark theme** — a sidebar toggle switches the whole app (via Bootstrap 5.3's built-in dark mode); the choice is remembered per browser and applied instantly on load with no flash of the wrong theme
 
 ## Technology Stack
@@ -297,6 +298,51 @@ Time Spent can also be updated directly from the Tasks list table via an
 inline input next to the status dropdown — no need to open the edit form
 for a quick update. Reports show both an "Hours Estimated" and an "Hours
 Logged" total, and every export includes both columns.
+
+## Email Reports
+
+The **Email Reports** page (sidebar) emails a point-by-point summary of your
+own tasks, meeting points, and task status counts. You choose what to
+include: **Task Status**, **Tasks**, and/or **Meeting Points** (My Points,
+Meeting Points, Decisions, and Notes are split into numbered points, one per line).
+
+- **Send now** — pick a period (Today, This Week, This Month, Last 3/6
+  Months, This Year, or a Custom range), optionally a project, and one or
+  more recipients (comma-separated). The Reports page also has an
+  **Email Report** button that opens this form with the same period.
+- **Automatic emails** — switch on any of **Daily, Weekly, Monthly, Every 6
+  Months, Yearly**. Each is sent at `EMAIL_SEND_HOUR` (default 18:00) on the
+  last day of its period (every day; Sunday; month end; 30 Jun & 31 Dec;
+  31 Dec). If the app was not running at that time, the missed email is
+  sent as soon as it starts again. A failed send is retried after an hour.
+  The **Send now** button on each row emails the current period immediately.
+- **Email log** — the last 20 sends, with the error message for any failure.
+
+### Setting up email (SMTP)
+
+Add these to `.env` and restart the app. For Gmail, first turn on 2-Step
+Verification, then create an **App Password** at
+https://myaccount.google.com/apppasswords and use it as `MAIL_PASSWORD`
+(your normal Gmail password will be rejected).
+
+```
+MAIL_SERVER=smtp.gmail.com
+MAIL_PORT=587
+MAIL_USE_TLS=True
+MAIL_USERNAME=you@gmail.com
+MAIL_PASSWORD=abcd efgh ijkl mnop
+MAIL_DEFAULT_SENDER=you@gmail.com
+EMAIL_SEND_HOUR=18
+```
+
+Automatic emails are checked every 5 minutes while `python app.py` is
+running. If the app is not always running, schedule this command instead
+(e.g. hourly with cron or Windows Task Scheduler), and set
+`EMAIL_SCHEDULER_ENABLED=False`:
+
+```bash
+flask --app app send-scheduled-emails
+```
 
 ## Running Tests
 

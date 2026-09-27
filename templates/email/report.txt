@@ -1,0 +1,43 @@
+{{ title }} — {{ report.range_label }}
+Hello {{ user_name }}, here is your summary.
+{% if show_status %}
+TASK STATUS
+-----------
+{% set s = report.summary -%}
+1. Total tasks: {{ s.total_tasks }}
+2. Completed: {{ s.completed }}
+3. In Progress: {{ s.in_progress }}
+4. Todo: {{ s.todo }}
+5. On Hold: {{ s.on_hold }}
+6. Cancelled: {{ s.cancelled }}
+7. Overdue: {{ s.overdue }}
+8. Meetings: {{ s.total_meetings }}
+9. Hours logged: {{ s.total_time_spent }} (estimated: {{ s.total_estimated }})
+{% endif %}{% if show_tasks %}
+TASKS ({{ report.tasks|length }})
+-----------
+{% for t in report.tasks -%}
+{{ loop.index }}. {{ t.title }}
+   - Date: {{ display_date(t.task_date) }}{% if t.task_time %} {{ t.task_time }}{% endif %}
+   - Status: {{ status_label(t.status) }} | Priority: {{ status_label(t.priority) }}
+{% if t.due_date %}   - Due: {{ display_date(t.due_date) }}
+{% endif %}{% if t.project_name %}   - Project: {{ t.project_name }}
+{% endif %}{% if t.estimated_hours is not none or t.time_spent_hours is not none %}   - Hours: {{ t.time_spent_hours if t.time_spent_hours is not none else '-' }} spent / {{ t.estimated_hours if t.estimated_hours is not none else '-' }} estimated
+{% endif %}{% for p in points(t.description) %}   - {{ p }}
+{% endfor %}{% for p in points(t.notes) %}   - Note: {{ p }}
+{% endfor %}
+{% else -%}
+No tasks in this period.
+{% endfor %}{% endif %}{% if show_meetings %}
+MEETINGS ({{ report.meetings|length }})
+-----------
+{% for m in report.meetings -%}
+{{ loop.index }}. {{ m.title }} — {{ display_date(m.meeting_date) }}{% if m.meeting_time %} {{ m.meeting_time }}{% endif %}{% if m.project_name %} ({{ m.project_name }}){% endif %}
+{% for label, field in [('My Points', m.my_points), ('Meeting Points', m.meeting_points), ('Decisions', m.decisions), ('Notes', m.notes)] %}{% if points(field) %}   {{ label }}:
+{% for p in points(field) %}     {{ loop.index }}) {{ p }}
+{% endfor %}{% endif %}{% endfor %}
+{% else -%}
+No meetings in this period.
+{% endfor %}{% endif %}
+--
+Sent by Task & Meeting Tracker on {{ generated_at }}.

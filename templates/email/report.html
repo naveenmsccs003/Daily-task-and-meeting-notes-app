@@ -1,0 +1,91 @@
+{% set status_colors = {'TODO': '#6b7280', 'IN_PROGRESS': '#2563eb', 'ON_HOLD': '#d97706', 'COMPLETED': '#16a34a', 'CANCELLED': '#dc2626'} -%}
+<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><title>{{ title }}</title></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:Arial,Helvetica,sans-serif;color:#111827;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:16px 0;">
+<tr><td align="center">
+<table role="presentation" width="640" cellpadding="0" cellspacing="0" style="max-width:640px;width:100%;background:#ffffff;border-radius:8px;overflow:hidden;">
+    <tr><td style="background:#1f2937;color:#ffffff;padding:20px 24px;">
+        <div style="font-size:20px;font-weight:bold;">{{ title }}</div>
+        <div style="font-size:14px;color:#d1d5db;margin-top:4px;">{{ report.range_label }}</div>
+    </td></tr>
+    <tr><td style="padding:20px 24px 4px;font-size:14px;">Hello {{ user_name }}, here is your summary.</td></tr>
+
+    {% if show_status %}
+    <tr><td style="padding:12px 24px;">
+        <h2 style="font-size:16px;margin:0 0 8px;border-bottom:2px solid #e5e7eb;padding-bottom:6px;">Task Status</h2>
+        {% set s = report.summary %}
+        <ol style="margin:0;padding-left:22px;font-size:14px;line-height:1.7;">
+            <li>Total tasks: <b>{{ s.total_tasks }}</b></li>
+            <li>Completed: <b style="color:#16a34a;">{{ s.completed }}</b></li>
+            <li>In Progress: <b style="color:#2563eb;">{{ s.in_progress }}</b></li>
+            <li>Todo: <b>{{ s.todo }}</b></li>
+            <li>On Hold: <b style="color:#d97706;">{{ s.on_hold }}</b></li>
+            <li>Cancelled: <b>{{ s.cancelled }}</b></li>
+            <li>Overdue: <b style="color:#dc2626;">{{ s.overdue }}</b></li>
+            <li>Meetings: <b>{{ s.total_meetings }}</b></li>
+            <li>Hours logged: <b>{{ s.total_time_spent }}</b> (estimated: {{ s.total_estimated }})</li>
+        </ol>
+    </td></tr>
+    {% endif %}
+
+    {% if show_tasks %}
+    <tr><td style="padding:12px 24px;">
+        <h2 style="font-size:16px;margin:0 0 8px;border-bottom:2px solid #e5e7eb;padding-bottom:6px;">Tasks ({{ report.tasks|length }})</h2>
+        {% if report.tasks %}
+        <ol style="margin:0;padding-left:22px;font-size:14px;line-height:1.5;">
+        {% for t in report.tasks %}
+            <li style="margin-bottom:10px;">
+                <b>{{ t.title }}</b>
+                <span style="display:inline-block;background:{{ status_colors.get(t.status, '#6b7280') }};color:#ffffff;border-radius:4px;padding:1px 6px;font-size:12px;">{{ status_label(t.status) }}</span>
+                <ul style="margin:4px 0 0;padding-left:18px;color:#374151;">
+                    <li>Date: {{ display_date(t.task_date) }}{% if t.task_time %} {{ t.task_time }}{% endif %} &middot; Priority: {{ status_label(t.priority) }}</li>
+                    {% if t.due_date %}<li>Due: {{ display_date(t.due_date) }}</li>{% endif %}
+                    {% if t.project_name %}<li>Project: {{ t.project_name }}</li>{% endif %}
+                    {% if t.estimated_hours is not none or t.time_spent_hours is not none %}<li>Hours: {{ t.time_spent_hours if t.time_spent_hours is not none else '-' }} spent / {{ t.estimated_hours if t.estimated_hours is not none else '-' }} estimated</li>{% endif %}
+                    {% for p in points(t.description) %}<li>{{ p }}</li>{% endfor %}
+                    {% for p in points(t.notes) %}<li>Note: {{ p }}</li>{% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+        </ol>
+        {% else %}
+        <p style="font-size:14px;color:#6b7280;margin:0;">No tasks in this period.</p>
+        {% endif %}
+    </td></tr>
+    {% endif %}
+
+    {% if show_meetings %}
+    <tr><td style="padding:12px 24px;">
+        <h2 style="font-size:16px;margin:0 0 8px;border-bottom:2px solid #e5e7eb;padding-bottom:6px;">Meetings ({{ report.meetings|length }})</h2>
+        {% if report.meetings %}
+        <ol style="margin:0;padding-left:22px;font-size:14px;line-height:1.5;">
+        {% for m in report.meetings %}
+            <li style="margin-bottom:12px;">
+                <b>{{ m.title }}</b> &mdash; {{ display_date(m.meeting_date) }}{% if m.meeting_time %} {{ m.meeting_time }}{% endif %}{% if m.project_name %} <span style="color:#6b7280;">({{ m.project_name }})</span>{% endif %}
+                {% for label, field in [('My Points', m.my_points), ('Meeting Points', m.meeting_points), ('Decisions', m.decisions), ('Notes', m.notes)] %}
+                {% if points(field) %}
+                <div style="margin-top:4px;font-weight:bold;color:#374151;">{{ label }}:</div>
+                <ol style="margin:2px 0 0;padding-left:20px;color:#374151;">
+                    {% for p in points(field) %}<li>{{ p }}</li>{% endfor %}
+                </ol>
+                {% endif %}
+                {% endfor %}
+            </li>
+        {% endfor %}
+        </ol>
+        {% else %}
+        <p style="font-size:14px;color:#6b7280;margin:0;">No meetings in this period.</p>
+        {% endif %}
+    </td></tr>
+    {% endif %}
+
+    <tr><td style="padding:16px 24px;font-size:12px;color:#9ca3af;border-top:1px solid #e5e7eb;">
+        Sent by Task &amp; Meeting Tracker on {{ generated_at }}.
+    </td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>

@@ -83,6 +83,36 @@ CREATE TABLE IF NOT EXISTS meetings (
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
     FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE SET NULL
 );
+
+CREATE TABLE IF NOT EXISTS email_schedules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    frequency TEXT NOT NULL,
+    recipients TEXT NOT NULL DEFAULT '',
+    include_status INTEGER NOT NULL DEFAULT 1,
+    include_tasks INTEGER NOT NULL DEFAULT 1,
+    include_meetings INTEGER NOT NULL DEFAULT 1,
+    is_active INTEGER NOT NULL DEFAULT 0,
+    last_sent_key TEXT,
+    last_sent_at TEXT,
+    last_attempt_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    UNIQUE (user_id, frequency),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS email_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    kind TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    recipients TEXT NOT NULL,
+    success INTEGER NOT NULL,
+    error TEXT,
+    sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
 """
 
 # Kept separate from TABLES_SCHEMA and applied *after* _migrate(): an index
@@ -99,6 +129,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_project_id ON tasks (project_id);
 CREATE INDEX IF NOT EXISTS idx_meetings_meeting_date ON meetings (meeting_date);
 CREATE INDEX IF NOT EXISTS idx_meetings_user_id ON meetings (user_id);
 CREATE INDEX IF NOT EXISTS idx_meetings_project_id ON meetings (project_id);
+CREATE INDEX IF NOT EXISTS idx_email_log_user_id ON email_log (user_id, sent_at);
 """
 
 
