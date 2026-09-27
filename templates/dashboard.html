@@ -98,7 +98,7 @@
 
     <div class="card panel">
         <div class="panel-header">Task Status Distribution</div>
-        <canvas id="statusChart" height="220"></canvas>
+        <div class="chart-box"><canvas id="statusChart"></canvas></div>
     </div>
 </div>
 
@@ -107,7 +107,7 @@
     <div class="card panel">
         <div class="panel-header">Priority Distribution</div>
         {% if data.total_tasks %}
-        <canvas id="priorityChart" height="220"></canvas>
+        <div class="chart-box"><canvas id="priorityChart"></canvas></div>
         {% else %}
         <p class="empty-state">No tasks in this period.</p>
         {% endif %}
@@ -116,7 +116,7 @@
     <div class="card panel">
         <div class="panel-header">Tasks by Project</div>
         {% if data.project_breakdown|length > 1 or (data.project_breakdown|length == 1 and data.project_breakdown[0].name != 'No Project') %}
-        <canvas id="projectChart" height="220"></canvas>
+        <div class="chart-box"><canvas id="projectChart"></canvas></div>
         {% elif data.project_breakdown %}
         <p class="chart-empty-note">All {{ data.project_breakdown[0].count }} task{{ 's' if data.project_breakdown[0].count != 1 }} in this period are untagged.<br>Assign a project from the task form to see this breakdown.</p>
         {% else %}
@@ -127,7 +127,7 @@
     <div class="card panel">
         <div class="panel-header">Completion Trend</div>
         {% if data.completion_trend and data.status_counts.COMPLETED %}
-        <canvas id="trendChart" height="220"></canvas>
+        <div class="chart-box"><canvas id="trendChart"></canvas></div>
         {% else %}
         <p class="empty-state">No completed tasks in this period yet.</p>
         {% endif %}
@@ -136,7 +136,7 @@
     <div class="card panel">
         <div class="panel-header">Hours: Estimated vs Spent</div>
         {% if data.hours_totals.estimated or data.hours_totals.spent %}
-        <canvas id="hoursChart" height="220"></canvas>
+        <div class="chart-box"><canvas id="hoursChart"></canvas></div>
         {% else %}
         <p class="empty-state">No hours logged or estimated in this period.</p>
         {% endif %}

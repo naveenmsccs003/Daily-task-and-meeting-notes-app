@@ -79,3 +79,25 @@
     padding: 2.5rem 1rem;
     margin: 0;
 }
+
+/* Fixed-height box for every dashboard chart. Chart.js's default
+   aspect ratio makes a doughnut/pie render as a square sized off the
+   panel's full width (much taller than a bar/line chart in the same
+   grid), which is what made these panels feel oversized. Pairing this
+   with maintainAspectRatio:false (set per-chart in dashboard.js) makes
+   every chart type respect this same, shorter height instead. */
+.chart-box {
+    position: relative;
+    height: 170px;
+}
+
+/* Now that charts are a fixed, shorter height, a chart-only panel
+   stretched to match a taller sibling (e.g. Today's Meetings) would
+   otherwise leave the chart pinned right under the header with a large
+   empty gap below it. Auto top/bottom margins on just the chart box
+   (not the panel's justify-content, which would also push the header
+   down) center it in the space left over after the header. */
+.dashboard-grid .panel .chart-box {
+    margin-top: auto;
+    margin-bottom: auto;
+}

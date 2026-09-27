@@ -23,7 +23,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 labels: labels,
                 datasets: [{ data: keys.map(function (k) { return counts[k] || 0; }), backgroundColor: colors }],
             },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' } } },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
         });
     })();
 
@@ -49,6 +49,7 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
             },
@@ -70,7 +71,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     backgroundColor: rows.map(function (r) { return r.color; }),
                 }],
             },
-            options: { responsive: true, plugins: { legend: { position: 'bottom' } } },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } },
         });
     })();
 
@@ -96,6 +97,7 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
                     y: { beginAtZero: true, ticks: { precision: 0 } },
@@ -123,6 +125,7 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 indexAxis: 'y',
                 plugins: { legend: { display: false } },
                 scales: { x: { beginAtZero: true } },
