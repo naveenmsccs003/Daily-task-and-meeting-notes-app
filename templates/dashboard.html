@@ -58,7 +58,7 @@
         <div class="panel-header">Today's Tasks</div>
         {% if data.todays_tasks %}
         <div class="table-responsive">
-            <table class="table table-sm align-middle responsive-table">
+            <table class="table table-sm align-middle responsive-table dashboard-mini-table">
                 <thead><tr><th>Time</th><th>Task</th><th>Priority</th><th>Status</th><th>Due</th><th></th></tr></thead>
                 <tbody>
                 {% for t in data.todays_tasks %}
@@ -103,7 +103,7 @@
 </div>
 
 <h2 class="section-title">Analytics <span class="text-muted small fw-normal">— for the period selected above</span></h2>
-<div class="dashboard-grid">
+<div class="dashboard-grid dashboard-grid-analytics">
     <div class="card panel">
         <div class="panel-header">Priority Distribution</div>
         {% if data.total_tasks %}
@@ -115,8 +115,10 @@
 
     <div class="card panel">
         <div class="panel-header">Tasks by Project</div>
-        {% if data.project_breakdown %}
+        {% if data.project_breakdown|length > 1 or (data.project_breakdown|length == 1 and data.project_breakdown[0].name != 'No Project') %}
         <canvas id="projectChart" height="220"></canvas>
+        {% elif data.project_breakdown %}
+        <p class="chart-empty-note">All {{ data.project_breakdown[0].count }} task{{ 's' if data.project_breakdown[0].count != 1 }} in this period are untagged.<br>Assign a project from the task form to see this breakdown.</p>
         {% else %}
         <p class="empty-state">No tasks in this period.</p>
         {% endif %}

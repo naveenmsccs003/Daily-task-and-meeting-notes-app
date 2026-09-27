@@ -32,7 +32,20 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
     gap: 1.25rem;
-    align-items: start;
+    align-items: stretch;
+}
+.dashboard-grid .panel {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+/* The analytics row holds exactly 4 chart tiles. minmax(320px,...) would
+   fit 3-per-row at typical desktop widths and strand the 4th tile alone
+   in a half-empty row; a 400px minimum settles evenly at 2-per-row
+   (a clean 2x2) instead. */
+.dashboard-grid-analytics {
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
 }
 
 .section-title {
@@ -48,3 +61,21 @@
 }
 .meeting-mini:last-child { border-bottom: none; }
 .meeting-mini-title { font-weight: 600; margin-bottom: 0.25rem; }
+
+/* Forces the compact Today's Tasks table to scroll horizontally within its
+   own narrow (1-of-3 columns) panel instead of wrapping every cell's text
+   onto 2-3 lines and truncating the Due Date column at the panel edge. */
+@media (min-width: 992px) {
+    .dashboard-mini-table td,
+    .dashboard-mini-table th {
+        white-space: nowrap;
+    }
+}
+
+.chart-empty-note {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-align: center;
+    padding: 2.5rem 1rem;
+    margin: 0;
+}
