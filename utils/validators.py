@@ -35,9 +35,13 @@ def parse_hours(raw, label="Value"):
     return value, None
 
 
-def validate_task(data):
+def validate_task(data, allow_time_spent=True):
     """data: dict-like with keys task_date, task_time, title, description,
     priority, status, due_date, notes.
+    allow_time_spent=False skips validating time_spent_hours entirely — used
+    on task creation, where that field isn't shown (nothing to log time
+    against yet), so any stray value in the request should be ignored
+    rather than surfaced as an error the user can't see or fix.
     Returns dict of field -> error message (empty dict means valid).
     """
     errors = {}
@@ -78,9 +82,10 @@ def validate_task(data):
     if len(notes) > LONG_TEXT_MAX:
         _err(errors, "notes", "Notes are too long.")
 
-    _, time_spent_error = parse_hours(data.get("time_spent_hours"), "Time spent")
-    if time_spent_error:
-        _err(errors, "time_spent_hours", time_spent_error)
+    if allow_time_spent:
+        _, time_spent_error = parse_hours(data.get("time_spent_hours"), "Time spent")
+        if time_spent_error:
+            _err(errors, "time_spent_hours", time_spent_error)
 
     _, estimated_error = parse_hours(data.get("estimated_hours"), "Estimated time")
     if estimated_error:

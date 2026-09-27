@@ -111,7 +111,7 @@ def create():
     all_users = User.get_all() if current_user.is_admin else None
 
     if request.method == "POST":
-        errors = validate_task(request.form)
+        errors = validate_task(request.form, allow_time_spent=False)
         owner_id, assignee_error = _resolve_assignee(current_user.id)
         if assignee_error:
             errors["assigned_user_id"] = assignee_error

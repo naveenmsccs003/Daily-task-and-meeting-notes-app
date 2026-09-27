@@ -101,7 +101,12 @@ def test_meeting_can_be_tagged_with_project(auth_client):
     assert b"Project sync" in response.data
 
 
-def test_task_time_spent_saved_and_validated(auth_client):
+def test_time_spent_not_settable_at_creation(auth_client):
+    """The create form has no Time Spent field; even if a value is posted
+    directly, it's silently ignored (never validated, never stored) —
+    logging time only happens after the task exists, via edit or the
+    Tasks list's inline input (see test_estimation_and_inline_time.py).
+    """
     response = auth_client.post(
         "/tasks/create",
         data={
@@ -113,25 +118,16 @@ def test_task_time_spent_saved_and_validated(auth_client):
         },
         follow_redirects=True,
     )
-    assert b"must be a number" in response.data
+    assert b"created successfully" in response.data
+    assert b"must be a number" not in response.data
 
-    auth_client.post(
-        "/tasks/create",
-        data={
-            "task_date": date.today().isoformat(),
-            "title": "Timed task 2",
-            "priority": "MEDIUM",
-            "status": "TODO",
-            "time_spent_hours": "2.5",
-        },
-    )
     from database import get_db
 
     with auth_client.application.app_context():
         row = get_db().execute(
-            "SELECT time_spent_hours FROM tasks WHERE title = ?", ("Timed task 2",)
+            "SELECT time_spent_hours FROM tasks WHERE title = ?", ("Timed task",)
         ).fetchone()
-    assert row["time_spent_hours"] == 2.5
+    assert row["time_spent_hours"] is None
 
 
 def test_reports_total_hours_logged(auth_client):

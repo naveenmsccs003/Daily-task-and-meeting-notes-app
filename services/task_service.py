@@ -148,6 +148,11 @@ def _parse_estimated_hours(data):
 
 
 def create_task(user_id, data):
+    """time_spent_hours is intentionally never set here — the create form
+    has no such field (nothing to log time against before the task exists),
+    so a new task always starts with time_spent_hours = NULL. Log time via
+    the edit form or the Tasks list's inline input after creation.
+    """
     db = get_db()
     status = data["status"].upper()
     completed_at = None
@@ -157,8 +162,8 @@ def create_task(user_id, data):
     cur = db.execute(
         """INSERT INTO tasks
            (user_id, project_id, task_date, task_time, title, description, priority,
-            status, due_date, notes, estimated_hours, time_spent_hours, completed_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            status, due_date, notes, estimated_hours, completed_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             user_id,
             _parse_project_id(data),
@@ -171,7 +176,6 @@ def create_task(user_id, data):
             data.get("due_date") or None,
             data.get("notes") or None,
             _parse_estimated_hours(data),
-            _parse_time_spent(data),
             completed_at,
         ),
     )
