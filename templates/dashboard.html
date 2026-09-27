@@ -1,6 +1,7 @@
 {% extends "base.html" %}
 {% from "_macros.html" import status_badge, priority_badge %}
 {% block title %}Dashboard - Task &amp; Meeting Tracker{% endblock %}
+{% block body_data %} data-page="dashboard"{% endblock %}
 {% block extra_css %}
 <link href="{{ url_for('static', filename='css/dashboard.css') }}" rel="stylesheet">
 {% endblock %}

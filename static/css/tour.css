@@ -1,0 +1,86 @@
+/* First-time-user onboarding tour: highlight ring + floating tooltip box.
+   No external library — plain overlay/positioning to match the project's
+   vanilla-JS approach. */
+
+.tour-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 15, 25, 0.55);
+    z-index: 1050;
+}
+
+.tour-highlight {
+    position: relative;
+    z-index: 1055;
+    border-radius: 8px;
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.65), 0 0 24px rgba(79, 70, 229, 0.45);
+}
+
+.tour-tooltip {
+    position: absolute;
+    z-index: 1060;
+    background: #fff;
+    color: #1f2937;
+    border-radius: 10px;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+    padding: 1rem 1.1rem;
+    width: 300px;
+    max-width: calc(100vw - 32px);
+}
+
+.tour-tooltip h5 {
+    margin: 0.15rem 0 0.5rem;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.tour-tooltip p {
+    font-size: 0.85rem;
+    color: #6b7280;
+    margin-bottom: 0.85rem;
+    line-height: 1.4;
+}
+
+.tour-step-count {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #4f46e5;
+    font-weight: 700;
+}
+
+.tour-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.tour-actions > div {
+    display: flex;
+    gap: 0.25rem;
+    align-items: center;
+}
+
+.sidebar-tour-link {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: #a5b4fc;
+    text-decoration: none;
+    font-size: 0.85rem;
+    margin-bottom: 0.6rem;
+}
+.sidebar-tour-link:hover {
+    color: #c7d2fe;
+}
+
+body.tour-active {
+    overflow: hidden;
+}
+
+@media (max-width: 480px) {
+    .tour-tooltip {
+        width: calc(100vw - 32px);
+    }
+}
