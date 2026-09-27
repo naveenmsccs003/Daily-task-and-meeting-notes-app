@@ -41,18 +41,18 @@
 <div class="card panel">
     {% if meetings %}
     <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
+        <table class="table table-sm align-middle mb-0 responsive-table">
             <thead><tr><th>Date</th><th>Time</th><th>Title</th><th>Project</th>{% if show_owner_column %}<th>Owner</th>{% endif %}<th>Decisions</th><th>Actions</th></tr></thead>
             <tbody>
             {% for m in meetings %}
                 <tr>
-                    <td>{{ m.meeting_date|display_date }}</td>
-                    <td>{{ m.meeting_time or '-' }}</td>
-                    <td><a href="{{ url_for('meetings.detail', meeting_id=m.id) }}">{{ m.title }}</a></td>
-                    <td>{% if m.project_name %}<span class="project-dot" style="background:{{ m.project_color }}"></span>{{ m.project_name }}{% else %}-{% endif %}</td>
-                    {% if show_owner_column %}<td>{{ m.owner_full_name or m.owner_username }}</td>{% endif %}
-                    <td>{{ (m.decisions or '-')|truncate(60) }}</td>
-                    <td class="task-actions">
+                    <td data-label="Date">{{ m.meeting_date|display_date }}</td>
+                    <td data-label="Time">{{ m.meeting_time or '-' }}</td>
+                    <td class="mobile-card-title"><a href="{{ url_for('meetings.detail', meeting_id=m.id) }}">{{ m.title }}</a></td>
+                    <td data-label="Project">{% if m.project_name %}<span class="project-dot" style="background:{{ m.project_color }}"></span>{{ m.project_name }}{% else %}-{% endif %}</td>
+                    {% if show_owner_column %}<td data-label="Owner">{{ m.owner_full_name or m.owner_username }}</td>{% endif %}
+                    <td data-label="Decisions">{{ (m.decisions or '-')|truncate(60) }}</td>
+                    <td data-label="Actions" class="task-actions">
                         <a href="{{ url_for('meetings.detail', meeting_id=m.id) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
                         {% if m.user_id == current_user.id %}
                         <a href="{{ url_for('meetings.edit', meeting_id=m.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>

@@ -58,16 +58,16 @@
         <div class="panel-header">Today's Tasks</div>
         {% if data.todays_tasks %}
         <div class="table-responsive">
-            <table class="table table-sm align-middle">
+            <table class="table table-sm align-middle responsive-table">
                 <thead><tr><th>Time</th><th>Task</th><th>Priority</th><th>Status</th><th>Due</th><th></th></tr></thead>
                 <tbody>
                 {% for t in data.todays_tasks %}
                     <tr>
-                        <td>{{ t.task_time or '-' }}</td>
-                        <td>{{ t.title }}</td>
-                        <td>{{ priority_badge(t.priority) }}</td>
-                        <td>{{ status_badge(t.status) }}</td>
-                        <td>{{ t.due_date|display_date if t.due_date else '-' }}</td>
+                        <td data-label="Time">{{ t.task_time or '-' }}</td>
+                        <td class="mobile-card-title">{{ t.title }}</td>
+                        <td data-label="Priority">{{ priority_badge(t.priority) }}</td>
+                        <td data-label="Status">{{ status_badge(t.status) }}</td>
+                        <td data-label="Due">{{ t.due_date|display_date if t.due_date else '-' }}</td>
                         <td><a href="{{ url_for('tasks.detail', task_id=t.id) }}" class="btn btn-sm btn-link">View</a></td>
                     </tr>
                 {% endfor %}

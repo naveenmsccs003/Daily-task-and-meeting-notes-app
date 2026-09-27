@@ -60,7 +60,7 @@
     {% set _ = qs.pop('sort', None) %}
     {% set _ = qs.pop('dir', None) %}
     <div class="table-responsive">
-        <table class="table table-sm align-middle mb-0">
+        <table class="table table-sm align-middle mb-0 responsive-table">
             <thead>
                 <tr>
                     {{ sort_th('date', 'Date', sort, sort_dir, 'tasks.list_view', qs) }}
@@ -78,28 +78,28 @@
             <tbody>
             {% for t in tasks %}
                 <tr>
-                    <td>{{ t.task_date|display_date }}</td>
-                    <td>{{ t.task_time or '-' }}</td>
-                    <td><a href="{{ url_for('tasks.detail', task_id=t.id) }}">{{ t.title }}</a></td>
-                    <td>{% if t.project_name %}<span class="project-dot" style="background:{{ t.project_color }}"></span>{{ t.project_name }}{% else %}-{% endif %}</td>
-                    {% if show_owner_column %}<td>{{ t.owner_full_name or t.owner_username }}</td>{% endif %}
-                    <td>{{ priority_badge(t.priority) }}</td>
-                    <td>
+                    <td data-label="Date">{{ t.task_date|display_date }}</td>
+                    <td data-label="Time">{{ t.task_time or '-' }}</td>
+                    <td class="mobile-card-title"><a href="{{ url_for('tasks.detail', task_id=t.id) }}">{{ t.title }}</a></td>
+                    <td data-label="Project">{% if t.project_name %}<span class="project-dot" style="background:{{ t.project_color }}"></span>{{ t.project_name }}{% else %}-{% endif %}</td>
+                    {% if show_owner_column %}<td data-label="Owner">{{ t.owner_full_name or t.owner_username }}</td>{% endif %}
+                    <td data-label="Priority">{{ priority_badge(t.priority) }}</td>
+                    <td data-label="Status">
                         {% if t.user_id == current_user.id %}
                         {{ status_select(t.id, t.status, statuses) }}
                         {% else %}
                         {{ status_badge(t.status) }}
                         {% endif %}
                     </td>
-                    <td>{{ t.due_date|display_date if t.due_date else '-' }}</td>
-                    <td style="max-width: 90px;">
+                    <td data-label="Due Date">{{ t.due_date|display_date if t.due_date else '-' }}</td>
+                    <td data-label="Time Spent" style="max-width: 90px;">
                         {% if t.user_id == current_user.id %}
                         {{ time_spent_input(t.id, t.time_spent_hours) }}
                         {% else %}
                         {{ (t.time_spent_hours ~ ' hrs') if t.time_spent_hours is not none else '-' }}
                         {% endif %}
                     </td>
-                    <td class="task-actions">
+                    <td data-label="Actions" class="task-actions">
                         <a href="{{ url_for('tasks.detail', task_id=t.id) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
                         {% if t.user_id == current_user.id %}
                         <a href="{{ url_for('tasks.edit', task_id=t.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
