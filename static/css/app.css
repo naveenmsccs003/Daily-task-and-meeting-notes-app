@@ -32,6 +32,20 @@ body {
     color: var(--text-color);
 }
 
+/* Bootstrap's default light-mode input border (#dee2e6) is too pale against
+   a white panel background to read as a border at all. Dark mode is left
+   alone — Bootstrap's own dark-theme border color already has good contrast
+   against the dark panel background there. */
+html:not([data-bs-theme="dark"]) .form-control,
+html:not([data-bs-theme="dark"]) .form-select {
+    border-color: #adb5bd;
+}
+html:not([data-bs-theme="dark"]) .form-control:focus,
+html:not([data-bs-theme="dark"]) .form-select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.15);
+}
+
 a { color: var(--accent); }
 
 .btn-primary {
