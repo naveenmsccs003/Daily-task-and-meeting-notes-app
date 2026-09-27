@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, priority_badge %}
+{% block title %}Dashboard - Task &amp; Meeting Tracker{% endblock %}
+{% block extra_css %}
+<link href="{{ url_for('static', filename='css/dashboard.css') }}" rel="stylesheet">
+{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Dashboard</h1>
+    <div class="quick-actions">
+        <a href="{{ url_for('tasks.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Task</a>
+        <a href="{{ url_for('meetings.create') }}" class="btn btn-outline-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Meeting</a>
+        <a href="{{ url_for('reports.index') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-bar-chart"></i> Reports</a>
+    </div>
+</div>
+
+<form method="get" class="filter-bar" id="dashboardFilterForm">
+    <select name="period" class="form-select form-select-sm w-auto" id="periodSelect">
+        {% for value, label in [('today','Today'), ('week','This Week'), ('month','This Month'), ('3months','Last 3 Months'), ('6months','Last 6 Months'), ('year','This Year'), ('custom','Custom')] %}
+        <option value="{{ value }}" {{ 'selected' if period == value }}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <input type="date" name="start_date" value="{{ from_date }}" class="form-control form-control-sm w-auto custom-range-field" {{ 'hidden' if period != 'custom' }}>
+    <input type="date" name="end_date" value="{{ to_date }}" class="form-control form-control-sm w-auto custom-range-field" {{ 'hidden' if period != 'custom' }}>
+    <button type="submit" class="btn btn-sm btn-outline-primary">Apply</button>
+</form>
+
+<div class="summary-cards">
+    <a href="{{ url_for('tasks.list_view', period='today') }}" class="summary-card">
+        <div class="summary-value">{{ data.todays_tasks|length }}</div>
+        <div class="summary-label">Today's Tasks</div>
+    </a>
+    <a href="{{ url_for('tasks.list_view', period=period, start_date=from_date, end_date=to_date, status='COMPLETED') }}" class="summary-card summary-success">
+        <div class="summary-value">{{ data.status_counts.COMPLETED }}</div>
+        <div class="summary-label">Completed</div>
+    </a>
+    <a href="{{ url_for('tasks.list_view', period=period, start_date=from_date, end_date=to_date, status='IN_PROGRESS') }}" class="summary-card summary-info">
+        <div class="summary-value">{{ data.status_counts.IN_PROGRESS }}</div>
+        <div class="summary-label">In Progress</div>
+    </a>
+    <a href="{{ url_for('tasks.list_view', period=period, start_date=from_date, end_date=to_date, status='TODO') }}" class="summary-card summary-secondary">
+        <div class="summary-value">{{ data.status_counts.TODO }}</div>
+        <div class="summary-label">Pending / TODO</div>
+    </a>
+    <a href="{{ url_for('tasks.list_view', period='all') }}" class="summary-card summary-danger">
+        <div class="summary-value">{{ data.overdue_count }}</div>
+        <div class="summary-label">Overdue</div>
+    </a>
+    <a href="{{ url_for('meetings.list_view', period='today') }}" class="summary-card summary-purple">
+        <div class="summary-value">{{ data.todays_meetings|length }}</div>
+        <div class="summary-label">Today's Meetings</div>
+    </a>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card panel">
+        <div class="panel-header">Today's Tasks</div>
+        {% if data.todays_tasks %}
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead><tr><th>Time</th><th>Task</th><th>Priority</th><th>Status</th><th>Due</th><th></th></tr></thead>
+                <tbody>
+                {% for t in data.todays_tasks %}
+                    <tr>
+                        <td>{{ t.task_time or '-' }}</td>
+                        <td>{{ t.title }}</td>
+                        <td>{{ priority_badge(t.priority) }}</td>
+                        <td>{{ status_badge(t.status) }}</td>
+                        <td>{{ t.due_date or '-' }}</td>
+                        <td><a href="{{ url_for('tasks.detail', task_id=t.id) }}" class="btn btn-sm btn-link">View</a></td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <p class="empty-state">No tasks scheduled for today.</p>
+        {% endif %}
+    </div>
+
+    <div class="card panel">
+        <div class="panel-header">Today's Meetings</div>
+        {% if data.todays_meetings %}
+            {% for m in data.todays_meetings %}
+            <div class="meeting-mini">
+                <div class="meeting-mini-title">{{ m.title }} <span class="text-muted">{{ m.meeting_time or '' }}</span></div>
+                {% if m.my_points %}<div><strong>My Points:</strong> {{ m.my_points|truncate(80) }}</div>{% endif %}
+                {% if m.meeting_points %}<div><strong>Meeting Points:</strong> {{ m.meeting_points|truncate(80) }}</div>{% endif %}
+                {% if m.decisions %}<div><strong>Decisions:</strong> {{ m.decisions|truncate(80) }}</div>{% endif %}
+                <a href="{{ url_for('meetings.detail', meeting_id=m.id) }}" class="btn btn-sm btn-link p-0">View details</a>
+            </div>
+            {% endfor %}
+        {% else %}
+        <p class="empty-state">No meetings scheduled for today.</p>
+        {% endif %}
+    </div>
+
+    <div class="card panel">
+        <div class="panel-header">Task Status Distribution</div>
+        <canvas id="statusChart" height="220"></canvas>
+    </div>
+</div>
+
+<script id="statusChartData" type="application/json">
+{{ data.status_counts|tojson }}
+</script>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

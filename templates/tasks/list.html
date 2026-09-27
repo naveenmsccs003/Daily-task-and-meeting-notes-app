@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, priority_badge, status_select %}
+{% block title %}Tasks - Task &amp; Meeting Tracker{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Tasks</h1>
+    <a href="{{ url_for('tasks.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Task</a>
+</div>
+
+<form method="get" class="filter-bar" id="taskFilterForm">
+    <input type="text" name="search" value="{{ filters.get('search', '') }}" class="form-control form-control-sm" placeholder="Search title, description, notes..." style="max-width: 240px;">
+
+    <select name="status" class="form-select form-select-sm w-auto">
+        <option value="">All Statuses</option>
+        {% for s in statuses %}
+        <option value="{{ s }}" {{ 'selected' if filters.get('status') == s }}>{{ s.replace('_',' ')|title }}</option>
+        {% endfor %}
+    </select>
+
+    <select name="priority" class="form-select form-select-sm w-auto">
+        <option value="">All Priorities</option>
+        {% for p in priorities %}
+        <option value="{{ p }}" {{ 'selected' if filters.get('priority') == p }}>{{ p|title }}</option>
+        {% endfor %}
+    </select>
+
+    <select name="period" class="form-select form-select-sm w-auto" id="periodSelect">
+        {% for value, label in [('all','All Time'), ('today','Today'), ('week','This Week'), ('month','This Month'), ('3months','Last 3 Months'), ('6months','Last 6 Months'), ('year','This Year'), ('custom','Custom')] %}
+        <option value="{{ value }}" {{ 'selected' if period == value }}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <input type="date" name="start_date" value="{{ filters.get('start_date', '') }}" class="form-control form-control-sm w-auto custom-range-field" {{ 'hidden' if period != 'custom' }}>
+    <input type="date" name="end_date" value="{{ filters.get('end_date', '') }}" class="form-control form-control-sm w-auto custom-range-field" {{ 'hidden' if period != 'custom' }}>
+
+    <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+    <a href="{{ url_for('tasks.list_view') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+</form>
+
+<div class="card panel">
+    {% if tasks %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th><th>Time</th><th>Task</th><th>Priority</th><th>Status</th><th>Due Date</th><th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for t in tasks %}
+                <tr>
+                    <td>{{ t.task_date }}</td>
+                    <td>{{ t.task_time or '-' }}</td>
+                    <td><a href="{{ url_for('tasks.detail', task_id=t.id) }}">{{ t.title }}</a></td>
+                    <td>{{ priority_badge(t.priority) }}</td>
+                    <td>{{ status_select(t.id, t.status, statuses) }}</td>
+                    <td>{{ t.due_date or '-' }}</td>
+                    <td class="task-actions">
+                        <a href="{{ url_for('tasks.detail', task_id=t.id) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
+                        <a href="{{ url_for('tasks.edit', task_id=t.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <form method="post" action="{{ url_for('tasks.delete', task_id=t.id) }}" class="d-inline delete-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty-state">No tasks found for this filter. Try adjusting the search or date range.</p>
+    {% endif %}
+</div>
+
+{% if total_pages > 1 %}
+{% set qs = filters.to_dict() %}
+{% set _ = qs.pop('page', None) %}
+<nav class="pagination-bar">
+    <ul class="pagination pagination-sm">
+        {% for p in range(1, total_pages + 1) %}
+        <li class="page-item {{ 'active' if p == page }}">
+            <a class="page-link" href="{{ url_for('tasks.list_view', page=p, **qs) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/tasks.js') }}"></script>
+{% endblock %}

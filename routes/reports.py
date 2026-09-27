@@ -1,0 +1,95 @@
+from flask import Blueprint, Response, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
+
+from services import export_service, report_service
+from utils.date_utils import format_date_for_db, get_period_dates
+from utils.helpers import safe_export_filename
+
+reports_bp = Blueprint("reports", __name__, url_prefix="/reports")
+
+
+def _resolve_range():
+    period = request.args.get("period", "month")
+    start = request.args.get("start_date")
+    end = request.args.get("end_date")
+    from_date, to_date = get_period_dates(period, start, end)
+    return period, from_date, to_date
+
+
+@reports_bp.route("")
+@login_required
+def index():
+    try:
+        period, from_date, to_date = _resolve_range()
+    except ValueError as exc:
+        flash(str(exc), "danger")
+        period, from_date, to_date = "month", *get_period_dates("month")
+
+    report = report_service.build_report(current_user.id, from_date, to_date)
+
+    return render_template(
+        "reports/index.html",
+        report=report,
+        period=period,
+        from_date=format_date_for_db(from_date) if from_date else "",
+        to_date=format_date_for_db(to_date) if to_date else "",
+    )
+
+
+def _report_for_export():
+    period, from_date, to_date = _resolve_range()
+    return report_service.build_report(current_user.id, from_date, to_date)
+
+
+@reports_bp.route("/export/excel")
+@login_required
+def export_excel():
+    try:
+        report = _report_for_export()
+    except ValueError as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("reports.index"))
+
+    buffer = export_service.generate_excel(report)
+    filename = safe_export_filename("task_meeting_report", "xlsx")
+    return Response(
+        buffer.getvalue(),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@reports_bp.route("/export/csv")
+@login_required
+def export_csv():
+    try:
+        report = _report_for_export()
+    except ValueError as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("reports.index"))
+
+    buffer = export_service.generate_csv_zip(report)
+    filename = safe_export_filename("task_meeting_report", "zip")
+    return Response(
+        buffer.getvalue(),
+        mimetype="application/zip",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
+
+
+@reports_bp.route("/export/pdf")
+@login_required
+def export_pdf():
+    try:
+        report = _report_for_export()
+    except ValueError as exc:
+        flash(str(exc), "danger")
+        return redirect(url_for("reports.index"))
+
+    buffer = export_service.generate_pdf(report)
+    filename = safe_export_filename("task_meeting_report", "pdf")
+    return Response(
+        buffer.getvalue(),
+        mimetype="application/pdf",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )

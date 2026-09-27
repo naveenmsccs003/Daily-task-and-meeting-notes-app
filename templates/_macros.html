@@ -1,0 +1,23 @@
+{% macro status_badge(status) -%}
+{% set map = {
+  'TODO': 'secondary',
+  'IN_PROGRESS': 'primary',
+  'ON_HOLD': 'warning text-dark',
+  'COMPLETED': 'success',
+  'CANCELLED': 'danger'
+} %}
+<span class="badge bg-{{ map.get(status, 'secondary') }}">{{ status.replace('_', ' ')|title }}</span>
+{%- endmacro %}
+
+{% macro priority_badge(priority) -%}
+{% set map = {'LOW': 'secondary', 'MEDIUM': 'info text-dark', 'HIGH': 'warning text-dark', 'URGENT': 'danger'} %}
+<span class="badge bg-{{ map.get(priority, 'secondary') }}">{{ priority|title }}</span>
+{%- endmacro %}
+
+{% macro status_select(task_id, current_status, statuses) -%}
+<select class="form-select form-select-sm status-select" data-task-id="{{ task_id }}" aria-label="Update task status">
+  {% for s in statuses %}
+    <option value="{{ s }}" {{ 'selected' if s == current_status }}>{{ s.replace('_', ' ')|title }}</option>
+  {% endfor %}
+</select>
+{%- endmacro %}

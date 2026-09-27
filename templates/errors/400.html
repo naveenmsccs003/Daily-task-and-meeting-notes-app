@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Bad Request{% endblock %}
+{% block content %}
+<div class="error-page">
+    <h1>400</h1>
+    <p>The request could not be understood.</p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Go to Dashboard</a>
+</div>
+{% endblock %}
+{% block content_guest %}
+<div class="error-page">
+    <h1>400</h1>
+    <p>The request could not be understood.</p>
+    <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Go to Login</a>
+</div>
+{% endblock %}

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Access Denied{% endblock %}
+{% block content %}
+<div class="error-page">
+    <h1>403</h1>
+    <p>You don't have permission to access this page.</p>
+    <a href="{{ url_for('dashboard.index') }}" class="btn btn-primary">Go to Dashboard</a>
+</div>
+{% endblock %}
+{% block content_guest %}
+<div class="error-page">
+    <h1>403</h1>
+    <p>You don't have permission to access this page.</p>
+    <a href="{{ url_for('auth.login') }}" class="btn btn-primary">Go to Login</a>
+</div>
+{% endblock %}

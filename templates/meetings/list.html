@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Meetings - Task &amp; Meeting Tracker{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>Meetings</h1>
+    <a href="{{ url_for('meetings.create') }}" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Add Meeting</a>
+</div>
+
+<form method="get" class="filter-bar">
+    <input type="text" name="search" value="{{ filters.get('search', '') }}" class="form-control form-control-sm" placeholder="Search title, points, decisions, notes..." style="max-width: 260px;">
+
+    <select name="period" class="form-select form-select-sm w-auto" id="periodSelect">
+        {% for value, label in [('all','All Time'), ('today','Today'), ('week','This Week'), ('month','This Month'), ('3months','Last 3 Months'), ('6months','Last 6 Months'), ('year','This Year'), ('custom','Custom')] %}
+        <option value="{{ value }}" {{ 'selected' if period == value }}>{{ label }}</option>
+        {% endfor %}
+    </select>
+    <input type="date" name="start_date" value="{{ filters.get('start_date', '') }}" class="form-control form-control-sm w-auto custom-range-field" {{ 'hidden' if period != 'custom' }}>
+    <input type="date" name="end_date" value="{{ filters.get('end_date', '') }}" class="form-control form-control-sm w-auto custom-range-field" {{ 'hidden' if period != 'custom' }}>
+
+    <button type="submit" class="btn btn-sm btn-outline-primary">Filter</button>
+    <a href="{{ url_for('meetings.list_view') }}" class="btn btn-sm btn-outline-secondary">Reset</a>
+</form>
+
+<div class="card panel">
+    {% if meetings %}
+    <div class="table-responsive">
+        <table class="table table-sm align-middle mb-0">
+            <thead><tr><th>Date</th><th>Time</th><th>Title</th><th>Decisions</th><th>Actions</th></tr></thead>
+            <tbody>
+            {% for m in meetings %}
+                <tr>
+                    <td>{{ m.meeting_date }}</td>
+                    <td>{{ m.meeting_time or '-' }}</td>
+                    <td><a href="{{ url_for('meetings.detail', meeting_id=m.id) }}">{{ m.title }}</a></td>
+                    <td>{{ (m.decisions or '-')|truncate(60) }}</td>
+                    <td class="task-actions">
+                        <a href="{{ url_for('meetings.detail', meeting_id=m.id) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
+                        <a href="{{ url_for('meetings.edit', meeting_id=m.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>
+                        <form method="post" action="{{ url_for('meetings.delete', meeting_id=m.id) }}" class="d-inline delete-form">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Delete"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p class="empty-state">No meetings found for this filter.</p>
+    {% endif %}
+</div>
+
+{% if total_pages > 1 %}
+{% set qs = filters.to_dict() %}
+{% set _ = qs.pop('page', None) %}
+<nav class="pagination-bar">
+    <ul class="pagination pagination-sm">
+        {% for p in range(1, total_pages + 1) %}
+        <li class="page-item {{ 'active' if p == page }}">
+            <a class="page-link" href="{{ url_for('meetings.list_view', page=p, **qs) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+    </ul>
+</nav>
+{% endif %}
+{% endblock %}
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/meetings.js') }}"></script>
+{% endblock %}

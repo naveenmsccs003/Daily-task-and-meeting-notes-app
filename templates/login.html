@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block title %}Login - Task &amp; Meeting Tracker{% endblock %}
+{% block content_guest %}
+<div class="login-shell">
+    <div class="login-brand">
+        <i class="bi bi-check2-square brand-icon"></i>
+        <h1>Daily Task &amp; Meeting Tracker</h1>
+        <p>Replace the spreadsheet. Track tasks and meetings in one place.</p>
+    </div>
+    <div class="login-form-wrap">
+        <form method="post" class="login-form" novalidate>
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <h2>Sign in</h2>
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" name="username" required autofocus autocomplete="username">
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Log In</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

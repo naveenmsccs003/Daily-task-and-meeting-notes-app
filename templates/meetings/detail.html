@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ meeting.title }} - Meeting Detail{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ meeting.title }}</h1>
+    <div class="quick-actions">
+        <a href="{{ url_for('meetings.edit', meeting_id=meeting.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+        <form method="post" action="{{ url_for('meetings.delete', meeting_id=meeting.id) }}" class="delete-form d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
+        </form>
+        <a href="{{ url_for('meetings.list_view') }}" class="btn btn-outline-secondary btn-sm">Back to Meetings</a>
+    </div>
+</div>
+
+<div class="card panel detail-panel">
+    <dl class="detail-list">
+        <dt>Date</dt><dd>{{ meeting.meeting_date }} {{ meeting.meeting_time or '' }}</dd>
+        <dt>My Points</dt><dd class="prewrap">{{ meeting.my_points or '-' }}</dd>
+        <dt>Meeting Points</dt><dd class="prewrap">{{ meeting.meeting_points or '-' }}</dd>
+        <dt>Decisions</dt><dd class="prewrap">{{ meeting.decisions or '-' }}</dd>
+        <dt>Notes</dt><dd class="prewrap">{{ meeting.notes or '-' }}</dd>
+        <dt>Created</dt><dd>{{ meeting.created_at }}</dd>
+        <dt>Last Updated</dt><dd>{{ meeting.updated_at }}</dd>
+    </dl>
+</div>
+{% endblock %}

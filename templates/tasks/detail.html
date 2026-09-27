@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% from "_macros.html" import status_badge, priority_badge %}
+{% block title %}{{ task.title }} - Task Detail{% endblock %}
+{% block content %}
+<div class="page-header">
+    <h1>{{ task.title }}</h1>
+    <div class="quick-actions">
+        <a href="{{ url_for('tasks.edit', task_id=task.id) }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-pencil"></i> Edit</a>
+        <form method="post" action="{{ url_for('tasks.delete', task_id=task.id) }}" class="delete-form d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i> Delete</button>
+        </form>
+        <a href="{{ url_for('tasks.list_view') }}" class="btn btn-outline-secondary btn-sm">Back to Tasks</a>
+    </div>
+</div>
+
+<div class="card panel detail-panel">
+    <dl class="detail-list">
+        <dt>Date</dt><dd>{{ task.task_date }} {{ task.task_time or '' }}</dd>
+        <dt>Priority</dt><dd>{{ priority_badge(task.priority) }}</dd>
+        <dt>Status</dt><dd>{{ status_badge(task.status) }}</dd>
+        <dt>Due Date</dt><dd>{{ task.due_date or '-' }}</dd>
+        <dt>Description</dt><dd>{{ task.description or '-' }}</dd>
+        <dt>Notes</dt><dd>{{ task.notes or '-' }}</dd>
+        <dt>Created</dt><dd>{{ task.created_at }}</dd>
+        <dt>Last Updated</dt><dd>{{ task.updated_at }}</dd>
+    </dl>
+</div>
+{% endblock %}
