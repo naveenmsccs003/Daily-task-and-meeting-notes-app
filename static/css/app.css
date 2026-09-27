@@ -153,6 +153,17 @@ a { color: var(--accent); }
 
 .task-actions { display: flex; gap: 0.25rem; white-space: nowrap; }
 
+.sort-link {
+    color: inherit;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    white-space: nowrap;
+}
+.sort-link:hover { color: var(--accent); }
+.sort-link i { font-size: 0.7rem; }
+
 .pagination-bar { display: flex; justify-content: center; }
 
 .detail-list { display: grid; grid-template-columns: 160px 1fr; row-gap: 0.75rem; column-gap: 1rem; margin: 0; }

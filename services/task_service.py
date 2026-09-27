@@ -4,10 +4,23 @@ no SQL lives in routes or templates.
 from database import get_db
 from utils.date_utils import format_date_for_db, today
 
+PRIORITY_ORDER_SQL = (
+    "CASE priority WHEN 'LOW' THEN 1 WHEN 'MEDIUM' THEN 2 "
+    "WHEN 'HIGH' THEN 3 WHEN 'URGENT' THEN 4 ELSE 0 END"
+)
+STATUS_ORDER_SQL = (
+    "CASE status WHEN 'TODO' THEN 1 WHEN 'IN_PROGRESS' THEN 2 "
+    "WHEN 'ON_HOLD' THEN 3 WHEN 'COMPLETED' THEN 4 WHEN 'CANCELLED' THEN 5 ELSE 0 END"
+)
+
+# Values here are hardcoded, whitelisted SQL fragments (never derived from
+# the untrusted `sort` request param) so building ORDER BY with an f-string
+# below is safe from injection; priority/status use a CASE ranking instead
+# of a plain column so "High" sorts above "Low", not alphabetically.
 SORT_COLUMNS = {
     "date": "task_date",
-    "priority": "priority",
-    "status": "status",
+    "priority": PRIORITY_ORDER_SQL,
+    "status": STATUS_ORDER_SQL,
     "due_date": "due_date",
 }
 

@@ -4,6 +4,7 @@ from flask_login import current_user, login_required
 from models import TASK_PRIORITIES, TASK_STATUSES
 from services import task_service
 from utils.date_utils import get_period_dates
+from utils.decorators import handle_errors
 from utils.helpers import json_error, json_success, wants_json
 from utils.validators import validate_status_value, validate_task
 
@@ -61,6 +62,7 @@ def list_view():
 
 @tasks_bp.route("/create", methods=["GET", "POST"])
 @login_required
+@handle_errors("Unable to create task.")
 def create():
     if request.method == "POST":
         errors = validate_task(request.form)
@@ -92,6 +94,7 @@ def detail(task_id):
 
 @tasks_bp.route("/<int:task_id>/edit", methods=["GET", "POST"])
 @login_required
+@handle_errors("Unable to update task.")
 def edit(task_id):
     task = task_service.get_task(current_user.id, task_id)
     if not task:
@@ -118,6 +121,7 @@ def edit(task_id):
 
 @tasks_bp.route("/<int:task_id>/delete", methods=["POST"])
 @login_required
+@handle_errors("Unable to delete task.")
 def delete(task_id):
     deleted = task_service.delete_task(current_user.id, task_id)
     message = "Task deleted successfully." if deleted else "Unable to delete task."
@@ -129,6 +133,7 @@ def delete(task_id):
 
 @tasks_bp.route("/<int:task_id>/status", methods=["POST"])
 @login_required
+@handle_errors("Unable to update task status.")
 def update_status(task_id):
     if request.is_json:
         status = (request.get_json(silent=True) or {}).get("status")

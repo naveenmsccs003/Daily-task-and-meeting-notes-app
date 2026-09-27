@@ -3,6 +3,7 @@ from flask_login import current_user, login_required
 
 from services import meeting_service
 from utils.date_utils import get_period_dates
+from utils.decorators import handle_errors
 from utils.helpers import json_error, json_success, wants_json
 from utils.validators import validate_meeting
 
@@ -52,6 +53,7 @@ def list_view():
 
 @meetings_bp.route("/create", methods=["GET", "POST"])
 @login_required
+@handle_errors("Unable to create meeting.")
 def create():
     if request.method == "POST":
         errors = validate_meeting(request.form)
@@ -77,6 +79,7 @@ def detail(meeting_id):
 
 @meetings_bp.route("/<int:meeting_id>/edit", methods=["GET", "POST"])
 @login_required
+@handle_errors("Unable to update meeting.")
 def edit(meeting_id):
     meeting = meeting_service.get_meeting(current_user.id, meeting_id)
     if not meeting:
@@ -102,6 +105,7 @@ def edit(meeting_id):
 
 @meetings_bp.route("/<int:meeting_id>/delete", methods=["POST"])
 @login_required
+@handle_errors("Unable to delete meeting.")
 def delete(meeting_id):
     deleted = meeting_service.delete_meeting(current_user.id, meeting_id)
     message = "Meeting deleted successfully." if deleted else "Unable to delete meeting."

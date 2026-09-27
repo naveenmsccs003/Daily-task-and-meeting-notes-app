@@ -38,22 +38,38 @@
 
 <div class="card panel">
     {% if tasks %}
+    {% set qs = filters.to_dict() %}
+    {% set _ = qs.pop('page', None) %}
+    {% set _ = qs.pop('sort', None) %}
+    {% set _ = qs.pop('dir', None) %}
     <div class="table-responsive">
         <table class="table table-sm align-middle mb-0">
             <thead>
                 <tr>
-                    <th>Date</th><th>Time</th><th>Task</th><th>Priority</th><th>Status</th><th>Due Date</th><th>Actions</th>
+                    {% for col, label in [('date', 'Date'), (none, 'Time'), (none, 'Task'), ('priority', 'Priority'), ('status', 'Status'), ('due_date', 'Due Date'), (none, 'Actions')] %}
+                    {% if col %}
+                    {% set next_dir = 'asc' if (sort == col and sort_dir == 'desc') else 'desc' %}
+                    <th>
+                        <a href="{{ url_for('tasks.list_view', sort=col, dir=next_dir, **qs) }}" class="sort-link">
+                            {{ label }}
+                            {% if sort == col %}<i class="bi bi-caret-{{ 'up' if sort_dir == 'asc' else 'down' }}-fill"></i>{% endif %}
+                        </a>
+                    </th>
+                    {% else %}
+                    <th>{{ label }}</th>
+                    {% endif %}
+                    {% endfor %}
                 </tr>
             </thead>
             <tbody>
             {% for t in tasks %}
                 <tr>
-                    <td>{{ t.task_date }}</td>
+                    <td>{{ t.task_date|display_date }}</td>
                     <td>{{ t.task_time or '-' }}</td>
                     <td><a href="{{ url_for('tasks.detail', task_id=t.id) }}">{{ t.title }}</a></td>
                     <td>{{ priority_badge(t.priority) }}</td>
                     <td>{{ status_select(t.id, t.status, statuses) }}</td>
-                    <td>{{ t.due_date or '-' }}</td>
+                    <td>{{ t.due_date|display_date if t.due_date else '-' }}</td>
                     <td class="task-actions">
                         <a href="{{ url_for('tasks.detail', task_id=t.id) }}" class="btn btn-sm btn-outline-secondary" title="View"><i class="bi bi-eye"></i></a>
                         <a href="{{ url_for('tasks.edit', task_id=t.id) }}" class="btn btn-sm btn-outline-secondary" title="Edit"><i class="bi bi-pencil"></i></a>

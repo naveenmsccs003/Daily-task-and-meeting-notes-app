@@ -66,7 +66,7 @@
                         <td>{{ t.title }}</td>
                         <td>{{ priority_badge(t.priority) }}</td>
                         <td>{{ status_badge(t.status) }}</td>
-                        <td>{{ t.due_date or '-' }}</td>
+                        <td>{{ t.due_date|display_date if t.due_date else '-' }}</td>
                         <td><a href="{{ url_for('tasks.detail', task_id=t.id) }}" class="btn btn-sm btn-link">View</a></td>
                     </tr>
                 {% endfor %}

@@ -8,6 +8,7 @@ from flask_wtf import CSRFProtect
 import database
 from config import Config
 from models import User
+from utils.date_utils import format_date_for_display
 
 
 def create_app(config_class=Config):
@@ -15,6 +16,8 @@ def create_app(config_class=Config):
     app.config.from_object(config_class)
 
     database.init_app(app)
+
+    app.jinja_env.filters["display_date"] = format_date_for_display
 
     csrf = CSRFProtect(app)
 

@@ -29,7 +29,7 @@
             <tbody>
             {% for m in meetings %}
                 <tr>
-                    <td>{{ m.meeting_date }}</td>
+                    <td>{{ m.meeting_date|display_date }}</td>
                     <td>{{ m.meeting_time or '-' }}</td>
                     <td><a href="{{ url_for('meetings.detail', meeting_id=m.id) }}">{{ m.title }}</a></td>
                     <td>{{ (m.decisions or '-')|truncate(60) }}</td>
