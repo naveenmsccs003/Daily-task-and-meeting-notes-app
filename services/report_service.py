@@ -11,6 +11,10 @@ def build_report(owner_id, from_date, to_date, project_id=None):
     tasks = task_service.tasks_in_range(owner_id, from_date, to_date, project_id=project_id)
     meetings = meeting_service.meetings_in_range(owner_id, from_date, to_date, project_id=project_id)
     status_counts = task_service.status_counts(owner_id, from_date, to_date, project_id=project_id)
+    priority_counts = task_service.priority_counts(owner_id, from_date, to_date, project_id=project_id)
+    project_breakdown = task_service.project_breakdown(owner_id, from_date, to_date, project_id=project_id)
+    completion_trend = task_service.completion_trend(owner_id, from_date, to_date, project_id=project_id)
+    hours_totals = task_service.hours_totals(owner_id, from_date, to_date, project_id=project_id)
 
     t = today()
     overdue = sum(
@@ -47,6 +51,10 @@ def build_report(owner_id, from_date, to_date, project_id=None):
         "meetings": meetings,
         "summary": summary,
         "status_counts": status_counts,
+        "priority_counts": priority_counts,
+        "project_breakdown": project_breakdown,
+        "completion_trend": completion_trend,
+        "hours_totals": hours_totals,
         "range_label": range_label,
         "from_date": from_date,
         "to_date": to_date,

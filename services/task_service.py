@@ -299,9 +299,9 @@ def status_counts(owner_id, from_date=None, to_date=None, project_id=None):
     return counts
 
 
-def priority_counts(owner_id, from_date=None, to_date=None):
+def priority_counts(owner_id, from_date=None, to_date=None, project_id=None):
     """Same shape as status_counts, grouped by priority instead — feeds the
-    Dashboard's Priority Distribution chart.
+    Priority Distribution chart on the Dashboard and Reports pages.
     """
     db = get_db()
     where = []
@@ -315,6 +315,9 @@ def priority_counts(owner_id, from_date=None, to_date=None):
     if to_date:
         where.append("task_date <= ?")
         params.append(format_date_for_db(to_date))
+    if project_id:
+        where.append("project_id = ?")
+        params.append(project_id)
     where_sql = " AND ".join(where) if where else "1=1"
 
     rows = db.execute(
@@ -327,9 +330,12 @@ def priority_counts(owner_id, from_date=None, to_date=None):
     return counts
 
 
-def project_breakdown(owner_id, from_date=None, to_date=None, limit=6):
+def project_breakdown(owner_id, from_date=None, to_date=None, project_id=None, limit=6):
     """Task count per project (untagged tasks grouped under "No Project"),
-    largest first — feeds the Dashboard's Tasks by Project chart.
+    largest first — feeds the Tasks by Project chart on the Dashboard and
+    Reports pages. When project_id is set (a specific project selected in
+    the report filter) this trivially returns just that one project, which
+    is correct — the chart simply hides itself in that case.
     """
     db = get_db()
     where = []
@@ -343,6 +349,9 @@ def project_breakdown(owner_id, from_date=None, to_date=None, limit=6):
     if to_date:
         where.append("tasks.task_date <= ?")
         params.append(format_date_for_db(to_date))
+    if project_id:
+        where.append("tasks.project_id = ?")
+        params.append(project_id)
     where_sql = " AND ".join(where) if where else "1=1"
 
     rows = db.execute(
@@ -358,11 +367,12 @@ def project_breakdown(owner_id, from_date=None, to_date=None, limit=6):
     return [{"name": r["name"], "color": r["color"], "count": r["cnt"]} for r in rows[:limit]]
 
 
-def completion_trend(owner_id, from_date, to_date):
+def completion_trend(owner_id, from_date, to_date, project_id=None):
     """Completed-task counts over the period, bucketed by day (or by week
     once the range exceeds ~45 days, to keep the chart readable). Daily
     buckets are zero-filled so the line doesn't skip gaps with no
-    completions — feeds the Dashboard's Completion Trend chart.
+    completions — feeds the Completion Trend chart on the Dashboard and
+    Reports pages.
     """
     if not from_date or not to_date:
         return []
@@ -374,6 +384,9 @@ def completion_trend(owner_id, from_date, to_date):
     if owner_id != ALL_USERS:
         where.append("user_id = ?")
         params.append(owner_id)
+    if project_id:
+        where.append("project_id = ?")
+        params.append(project_id)
     where_sql = " AND ".join(where)
 
     span_days = (to_date - from_date).days + 1
@@ -402,9 +415,9 @@ def completion_trend(owner_id, from_date, to_date):
     return trend
 
 
-def hours_totals(owner_id, from_date=None, to_date=None):
+def hours_totals(owner_id, from_date=None, to_date=None, project_id=None):
     """Sum of estimated vs actual hours across matching tasks — feeds the
-    Dashboard's Hours: Estimated vs Spent chart.
+    Hours: Estimated vs Spent chart on the Dashboard and Reports pages.
     """
     db = get_db()
     where = []
@@ -418,6 +431,9 @@ def hours_totals(owner_id, from_date=None, to_date=None):
     if to_date:
         where.append("task_date <= ?")
         params.append(format_date_for_db(to_date))
+    if project_id:
+        where.append("project_id = ?")
+        params.append(project_id)
     where_sql = " AND ".join(where) if where else "1=1"
 
     row = db.execute(
