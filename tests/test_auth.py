@@ -39,3 +39,27 @@ def test_dashboard_requires_login(client):
 def test_logout(auth_client):
     response = auth_client.get("/logout", follow_redirects=True)
     assert b"logged out" in response.data.lower()
+
+
+def test_app_name_on_login_and_dashboard(client):
+    page = client.get("/login").data
+    assert b"<title>Login - Moraccle Task &amp; Meeting Tracker</title>" in page
+    assert b"Moraccle" in page
+
+    client.post("/login", data={"username": "testuser", "password": "password123"})
+    page = client.get("/dashboard").data
+    assert b"Dashboard - Moraccle Task &amp; Meeting Tracker" in page
+    assert b"sidebar-brand-name\">Moraccle" in page
+
+
+def test_login_error_shown_inside_form(client):
+    page = client.post("/login", data={"username": "x", "password": "y"}).data
+    assert b'class="auth-alert auth-alert-danger"' in page
+    # Only the in-form message is rendered, not the page-level flash bar too.
+    assert b"flash-container" not in page
+
+
+def test_login_page_has_theme_toggle(client):
+    page = client.get("/login").data
+    assert b'id="themeToggleBtn"' in page
+    assert b"js/theme.js" in page

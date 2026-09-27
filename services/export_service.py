@@ -7,6 +7,7 @@ import io
 import zipfile
 from datetime import datetime
 
+from flask import current_app
 from openpyxl import Workbook
 from openpyxl.styles import Alignment, Font, PatternFill
 from openpyxl.utils import get_column_letter
@@ -99,7 +100,7 @@ def generate_excel(report_data):
 
     summary_ws = wb.active
     summary_ws.title = "Summary"
-    summary_ws["A1"] = "Daily Task & Meeting Tracker - Report"
+    summary_ws["A1"] = f"{current_app.config['APP_NAME']} - Report"
     summary_ws["A1"].font = Font(bold=True, size=14)
     summary_ws["A2"] = f"Report Period: {report_data['range_label']}"
     summary_ws["A3"] = f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}"
@@ -205,7 +206,7 @@ def generate_pdf(report_data):
     heading_style = styles["Heading2"]
 
     story = []
-    story.append(Paragraph("Daily Task &amp; Meeting Tracker", title_style))
+    story.append(Paragraph(current_app.config["APP_NAME"].replace("&", "&amp;"), title_style))
     story.append(Paragraph(f"Report Period: {report_data['range_label']}", styles["Normal"]))
     story.append(
         Paragraph(f"Generated: {datetime.now().strftime('%d %b %Y %H:%M')}", styles["Normal"])

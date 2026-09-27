@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Edit Project' if mode == 'edit' else 'Add Project' }} - Task &amp; Meeting Tracker{% endblock %}
+{% block title %}{{ 'Edit Project' if mode == 'edit' else 'Add Project' }} - {{ app_name }}{% endblock %}
 {% block content %}
 <div class="page-header">
     <h1>{{ 'Edit Project' if mode == 'edit' else 'Add Project' }}</h1>

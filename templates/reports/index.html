@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% from "_macros.html" import status_badge, priority_badge %}
-{% block title %}Reports - Task &amp; Meeting Tracker{% endblock %}
+{% block title %}Reports - {{ app_name }}{% endblock %}
 {% block extra_css %}
 <link href="{{ url_for('static', filename='css/dashboard.css') }}" rel="stylesheet">
 {% endblock %}

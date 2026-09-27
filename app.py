@@ -18,6 +18,7 @@ def create_app(config_class=Config):
     database.init_app(app)
 
     app.jinja_env.filters["display_date"] = format_date_for_display
+    app.jinja_env.globals["app_name"] = app.config["APP_NAME"]
 
     csrf = CSRFProtect(app)
 

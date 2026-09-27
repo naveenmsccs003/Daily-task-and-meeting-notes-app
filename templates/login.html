@@ -1,26 +1,118 @@
 {% extends "base.html" %}
-{% block title %}Login - Task &amp; Meeting Tracker{% endblock %}
+{% block title %}Login - {{ app_name }}{% endblock %}
+{% block extra_css %}
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/login.css') }}" rel="stylesheet">
+{% endblock %}
+{% block body_data %} class="login-page"{% endblock %}
+{% block guest_flash %}{% endblock %}
 {% block content_guest %}
-<div class="login-shell">
-    <div class="login-brand">
-        <i class="bi bi-check2-square brand-icon"></i>
-        <h1>Daily Task &amp; Meeting Tracker</h1>
-        <p>Replace the spreadsheet. Track tasks and meetings in one place.</p>
-    </div>
-    <div class="login-form-wrap">
-        <form method="post" class="login-form" novalidate>
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <h2>Sign in</h2>
-            <div class="mb-3">
-                <label for="username" class="form-label">Username</label>
-                <input type="text" class="form-control" id="username" name="username" required autofocus autocomplete="username">
-            </div>
-            <div class="mb-3">
-                <label for="password" class="form-label">Password</label>
-                <input type="password" class="form-control" id="password" name="password" required autocomplete="current-password">
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Log In</button>
-        </form>
-    </div>
+<div class="auth-bg" aria-hidden="true">
+    <span class="auth-blob auth-blob-1"></span>
+    <span class="auth-blob auth-blob-2"></span>
+    <span class="auth-blob auth-blob-3"></span>
 </div>
+
+<button type="button" id="themeToggleBtn" class="auth-theme-toggle" aria-label="Toggle light/dark theme">
+    <i class="bi bi-moon-stars" id="themeToggleIcon"></i>
+    <span id="themeToggleLabel">Dark Mode</span>
+</button>
+
+<main class="auth-wrap">
+    <div class="auth-card">
+        <section class="auth-brand">
+            <div class="auth-logo">
+                <span class="auth-logo-mark"><i class="bi bi-check2-square"></i></span>
+                <span class="auth-logo-text">
+                    <span class="auth-logo-name">Moraccle</span>
+                    <span class="auth-logo-sub">Task &amp; Meeting Tracker</span>
+                </span>
+            </div>
+
+            <div class="auth-brand-body">
+                <h1>Plan your day.<br>Capture every meeting.</h1>
+                <p>One simple place for your daily tasks, meeting points, and progress reports.</p>
+                <ul class="auth-features">
+                    <li><i class="bi bi-list-check"></i> Track tasks by status, priority &amp; project</li>
+                    <li><i class="bi bi-people"></i> Keep meeting points &amp; decisions organised</li>
+                    <li><i class="bi bi-bar-chart-line"></i> Reports, exports &amp; email summaries</li>
+                </ul>
+            </div>
+
+            <p class="auth-brand-foot">&copy; Moraccle</p>
+        </section>
+
+        <section class="auth-form-side">
+            <form method="post" class="auth-form" novalidate id="loginForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="auth-form-head">
+                    <h2>Welcome back</h2>
+                    <p>Sign in to {{ app_name }}</p>
+                </div>
+
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% for category, message in messages %}
+                <div class="auth-alert auth-alert-{{ 'danger' if category == 'error' else category }}" role="alert">
+                    <i class="bi bi-{{ 'exclamation-circle' if category in ('danger', 'error', 'warning') else 'info-circle' }}"></i>
+                    <span>{{ message }}</span>
+                </div>
+                {% endfor %}
+                {% endwith %}
+
+                <div class="auth-field">
+                    <label for="username">Username</label>
+                    <div class="auth-input">
+                        <i class="bi bi-person"></i>
+                        <input type="text" id="username" name="username" placeholder="Enter your username"
+                               required autofocus autocomplete="username">
+                    </div>
+                </div>
+
+                <div class="auth-field">
+                    <label for="password">Password</label>
+                    <div class="auth-input">
+                        <i class="bi bi-lock"></i>
+                        <input type="password" id="password" name="password" placeholder="Enter your password"
+                               required autocomplete="current-password">
+                        <button type="button" class="auth-eye" id="togglePassword" aria-label="Show password" aria-pressed="false">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <button type="submit" class="auth-submit" id="loginSubmit">
+                    <span class="auth-submit-label">Sign In</span>
+                    <i class="bi bi-arrow-right"></i>
+                </button>
+
+                <p class="auth-help"><i class="bi bi-shield-lock"></i> Forgot password? Ask your admin to reset it.</p>
+            </form>
+        </section>
+    </div>
+</main>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var pwd = document.getElementById('password');
+    var eye = document.getElementById('togglePassword');
+    eye.addEventListener('click', function () {
+        var show = pwd.type === 'password';
+        pwd.type = show ? 'text' : 'password';
+        eye.setAttribute('aria-pressed', show ? 'true' : 'false');
+        eye.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+        eye.querySelector('i').className = show ? 'bi bi-eye-slash' : 'bi bi-eye';
+        pwd.focus();
+    });
+
+    var form = document.getElementById('loginForm');
+    var submit = document.getElementById('loginSubmit');
+    form.addEventListener('submit', function () {
+        submit.disabled = true;
+        submit.classList.add('is-loading');
+        submit.querySelector('.auth-submit-label').textContent = 'Signing in…';
+    });
+});
+</script>
 {% endblock %}

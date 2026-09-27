@@ -40,4 +40,4 @@ MEETINGS ({{ report.meetings|length }})
 No meetings in this period.
 {% endfor %}{% endif %}
 --
-Sent by Task & Meeting Tracker on {{ generated_at }}.
+Sent by {{ app_name }} on {{ generated_at }}.

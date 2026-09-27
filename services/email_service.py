@@ -94,9 +94,10 @@ def build_report_email(user, from_date, to_date, title, sections, project_id=Non
         "points": to_points,
         "status_label": status_label,
         "display_date": format_date_for_display,
+        "app_name": current_app.config["APP_NAME"],
         "generated_at": datetime.now(get_timezone()).strftime("%d %b %Y %H:%M"),
     }
-    subject = f"{title}: {report['range_label']} - Task & Meeting Tracker"
+    subject = f"{title}: {report['range_label']} - {current_app.config['APP_NAME']}"
     text_body = render_template("email/report.txt", **context)
     html_body = render_template("email/report.html", **context)
     return subject, text_body, html_body
@@ -120,7 +121,7 @@ def send_email(recipients, subject, text_body, html_body):
 
     msg = EmailMessage()
     msg["Subject"] = subject
-    msg["From"] = formataddr(("Task & Meeting Tracker", sender_address()))
+    msg["From"] = formataddr((cfg["APP_NAME"], sender_address()))
     msg["To"] = ", ".join(recipients)
     msg.set_content(text_body)
     msg.add_alternative(html_body, subtype="html")
